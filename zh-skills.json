@@ -1,0 +1,464 @@
+{
+  "ai-company": {
+    "en": "丞相制AI交付操作系统：从一句话需求到可验收交付。适用场景：多步骤开发、多Agent协作、复杂任务交付。简单问答、单文件修改不得启动。用户只和丞相对话，内部角色不得直接面向用户。"
+  },
+  "ai-film": {
+    "en": "AI 影视制作唯一入口。用户给出剧本/小说/一场戏，要求\"拆分镜、定镜头、写表演、出视频提示词、转 MiniMax H3 / Seedance / 即梦提示词\"时使用。三段式：storyboard-designer 定镜头 → 表演层定演技与否定约束 → video-prompt-writer 编译模型方言。每阶段必须过 gate.py 机械门禁，BLOCK 即停。"
+  },
+  "ai-film-router": {
+    "en": "Route an AI-film project into exactly one requested production stage, whether the user starts from zero, continues from uploaded materials, revises an earlier stage, or only needs a downstream deliverable such as CINEDANCE."
+  },
+  "alpha": {
+    "en": "Fixture dispatcher with a mode table and forced-read references."
+  },
+  "arkui-v1-v2-migration-and-mixusage": {
+    "en": "分析并实施 ArkUI 状态管理 V1/V2 迁移或混用，覆盖整仓/组件迁移、V1/V2 共存、跨版本数据流、storage、渲染复用、依赖和构建验证。用于迁移规划与改造、混用方案设计、兼容边界实现或问题诊断；不用于普通的纯 V2 功能开发。"
+  },
+  "arkuix-flowlog-diagnose-skill": {
+    "en": "Use when diagnosing ArkUI-X (Android/iOS) white screen, jank, startup slowness, or crash from developer logcat/os_log/hilog. Analyzes 4 dimensions — lifecycle anchor coverage (22 anchors across Java/JNI/native/shared) / FAQ pattern grep (12 log signatures + 4 config fallbacks) / first-frame presence (F1 request + vsync) / timestamp gaps-duplicates — and outputs symptom classification → stall stage → evidence → FAQ root cause → remediation. Triggers on \"白屏\", \"卡顿\", \"闪退\", \"启动慢\", \"ArkUI-X 日志排查\", \"flowlog diagnose\", or when a developer pastes ArkUI-X log fragments for triage."
+  },
+  "arkuix-interface-scan": {
+    "en": "扫描 OpenHarmony Stage 工程全部 @ohos.*/@hms.* 接口引用与 Native NDK C-API 引用（头文件包含与 OH_* 符号），按 ArkUI-X 适配性六分类（完整直用/有损直用/等价桥接/降级桥接/平台裁剪/业务决策，unknown 兜底）产出 ScanReport(JSON) 与迁移建议报告(Markdown)。开发者在评估 OH 应用迁移 ArkUI-X、需要接口适配清单或迁移画像时使用；FA 模型工程将被告知不支持。"
+  },
+  "arkuix-migration-skeleton": {
+    "en": "为 OpenHarmony Stage 工程生成 ArkUI-X 跨平台骨架（按平台选项的 Android/iOS 壳 + 共享 ArkTS）。提供 modify（经 ace tool modify 就地改造原工程）与 new（ace create 新建 scaffold 后迁入源码）双模式；消费 F2 ScanReport 判定工程模型（FA 直接拒绝）；检测 Android/iOS 编译环境与 ArkUI-X SDK（API 24+ 门槛）并生成编译验证辅助。开发者在 OH 应用迁移 ArkUI-X 需要搭建跨平台工程结构时使用。"
+  },
+  "asset-production": {
+    "en": "资产图生产：剧本→实体清单→设定图（人物/场景/道具）→分镜图。填平「纸面资产卡」与「图面资产」之间的缺口。三模式 inventory / sheet / board。触发词：资产盘点 / 设定图 / 三视图 / 道具图 / 分镜图 / storyboard / entity inventory。"
+  },
+  "autoplan": {
+    "en": "Auto-review pipeline — reads the full CEO, design, eng, and DX review skills from disk and runs them sequentially with auto-decisions using 6 decision principles. (gstack)"
+  },
+  "benchmark": {
+    "en": "Performance regression detection using the browse daemon. (gstack)"
+  },
+  "benchmark-models": {
+    "en": "Cross-model benchmark for gstack skills. (gstack)"
+  },
+  "beta": {
+    "en": "Clean fixture tool skill with no forced reads and no mode table."
+  },
+  "book-binding-artistry": {
+    "en": "典藏书籍装帧艺术工坊协议：依托 LITOSEA 后台书封装帧工作台（材质底层、纹样织物、书形设计、装帧组合），以六阶段工匠管线打造顶级视觉与触感震撼的书籍装帧艺术。"
+  },
+  "browse": {
+    "en": "Fast headless browser for QA testing and site dogfooding. (gstack)"
+  },
+  "budget-calculus": {
+    "en": "预算算法：评估成本、范围、复用力和周期承载力"
+  },
+  "canary": {
+    "en": "Post-deploy canary monitoring. (gstack)"
+  },
+  "captain": {
+    "en": "Run a crew of coding agents from one controller (also /crew): lanes send READY blocks and never merge; the controller merges through trains, keeps the digest, relays approvals, fixes flakes daily. (gstack)"
+  },
+  "careful": {
+    "en": "Safety guardrails for destructive commands. (gstack)"
+  },
+  "character-development": {
+    "en": "主脑和世界骨架成立后开发核心人物网、私处执为底盘，保留相变可能，不跑剧情。"
+  },
+  "claude": {
+    "en": "Claude Code CLI wrapper for non-Claude hosts - three modes. Review: independent diff review via claude -p. Challenge: adversarial failure-mode review. Consult: ask Claude about the repo with read-only file tools. Use when asked for \"claude review\", \"claude challenge\", \"ask claude\", \"second opinion from claude\", or \"outside voice\". (gstack)"
+  },
+  "codex": {
+    "en": "OpenAI Codex CLI wrapper — three modes. (gstack)"
+  },
+  "context-restore": {
+    "en": "Restore working context saved earlier by /context-save. (gstack)"
+  },
+  "context-save": {
+    "en": "Save working context. (gstack)"
+  },
+  "creative-review": {
+    "en": "针对作者当前明确提出的问题，对正文、结构或规划进行证据化审阅。只检查与当前问题相关的范围，指出具体问题、证据、影响与可执行建议，不擅自改稿，不把个人偏好冒充结构错误。"
+  },
+  "cso": {
+    "en": "Chief Security Officer mode. (gstack)"
+  },
+  "design-consultation": {
+    "en": "Design consultation: understands your product, researches the landscape, proposes a complete design system (aesthetic, typography, color, layout, spacing, motion), and generates font+color preview... (gstack)"
+  },
+  "design-html": {
+    "en": "Design finalization: generates production-quality Pretext-native HTML/CSS. (gstack)"
+  },
+  "design-review": {
+    "en": "Designer's eye QA: finds visual inconsistency, spacing issues, hierarchy problems, AI slop patterns, and slow interactions — then fixes them. (gstack)"
+  },
+  "design-shotgun": {
+    "en": "Design shotgun: generate multiple AI design variants, open a comparison board, collect structured feedback, and iterate. (gstack)"
+  },
+  "deslop-shared-libs": {
+    "en": "Find worthwhile shared-code extractions in recent work. (gstack)"
+  },
+  "devex-review": {
+    "en": "Live developer experience audit. (gstack)"
+  },
+  "diagram": {
+    "en": "Turn an English description (or mermaid source) into a diagram triplet: the source, an editable .excalidraw file you can open on excalidraw.com, and rendered SVG + PNG. (gstack)"
+  },
+  "director-review": {
+    "en": "导演视角分镜审查——模拟指定导演的审美与参数指纹，对 storyboard-designer 输出的镜头方案做双重审查：硬参数合规检查（ASL、景别分布、运镜性格、光源逻辑）+ 人格化 critique（导演口吻、创作哲学）。覆盖 22 位实测导演，4 位核心导演有深度人格画像。用于在 storyboard-designer 产出方案后、人闸 2（风格层选择）前，提供「这个导演会怎么说」的独立意见。**⚠️ 本 skill 强制要求以独立 subagent 运行，禁止在方案生成上下文中直接执行。**"
+  },
+  "document-generate": {
+    "en": "Generate missing documentation from scratch for a feature, module, or entire project. (gstack)"
+  },
+  "document-release": {
+    "en": "Post-ship documentation update. (gstack)"
+  },
+  "eval-plan": {
+    "en": "Preregister a paid eval (bars, arms, decoys, stop rules), dry-run it at zero cost, then run a three-item priced pilot whose spend table gates approval. (gstack)"
+  },
+  "film-acting": {
+    "en": "Write only the acting and performance block for a user-approved scene or shot from project files or uploaded materials when the router selects stage 07-acting."
+  },
+  "film-characters": {
+    "en": "Create or revise only the character bible for an approved synopsis. Use only when the project router selects stage 02-characters."
+  },
+  "film-cinedance": {
+    "en": "影视导演级提示词与分镜演练技能。基于洋子 CINEDANCE V4 架构，执行 4-D 导演推演（拆解、诊断、空间调度、起幅定场、表演时间轴与光学控制），专精于 Krea2 关键帧预演与 MiniMax H3 视频动态提示词生成。"
+  },
+  "film-lira-assets": {
+    "en": "Generate production-ready image prompts and asset briefs from a final screenplay or user-supplied character, location, and prop materials when the router selects stage 06-assets."
+  },
+  "film-production": {
+    "en": "根据作者选定的已保存剧本与已接受制作稿，执行内部影视工作台的受控制作阶段。"
+  },
+  "film-screenplay": {
+    "en": "Deeply merge and format user-approved story materials into a director-ready screenplay, or revise an existing screenplay, when the router selects stage 05-screenplay."
+  },
+  "film-synopsis": {
+    "en": "Create or revise only an AI film synopsis and concept anchor. Use only when the project router selects stage 01-synopsis."
+  },
+  "film-treatment": {
+    "en": "Transform approved story materials into a scene-by-scene treatment only. Use only when the project router selects stage 04-treatment."
+  },
+  "film-worldbuilding": {
+    "en": "Create or revise only world rules, locations, factions, and story objects. Use only when the project router selects stage 03-worldbuilding."
+  },
+  "find-skills": {
+    "en": "Helps users discover and install agent skills when they ask questions like \"how do I do X\", \"find a skill for X\", \"is there a skill that can...\", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill."
+  },
+  "flue": {
+    "en": "Use when Claude needs to inspect, install, test, or run Flue adapters to control supported Windows and macOS desktop apps through local scripting bridges."
+  },
+  "foundation-interview": {
+    "en": "帮助作者找到故事主脑；作者确认并满足失稳条件后立即停止。"
+  },
+  "freeze": {
+    "en": "Restrict file edits to a specific directory for the session. (gstack)"
+  },
+  "fujimoto-manga-prompt": {
+    "en": "藤本树黑白漫画视听语言与 MOSS-Image 生产级提示词编译规范。基于《电锯人》181页正文及多模态打标同构体系，专精非对称分镜拆镜、极黑留白光影、神经质微表情、冷酷电影感蒙太奇与中文对白气泡精准排版。将小说文本、剧本文案一键编译为工业级 MOSS 漫画提示词。"
+  },
+  "gpt-image-gen": {
+    "en": "使用本机 ChatGPT 官方订阅（Codex / gpt-image-2.5-flare）直接生成高质量影视级图片的专用生图技能。当用户需要出图、生成关键帧、角色图或场景图时自动调用。"
+  },
+  "gstack": {
+    "en": "Router for the gstack skill suite. Sends any gstack request to the right skill (planning, review, QA, shipping, debugging, docs, security, design). For browser/QA and dogfooding it points you at /browse. Use when you invoke gstack without a specific skill, or ask \"which gstack skill fits this?\". (gstack)"
+  },
+  "gstack-openclaw-ceo-review": {
+    "en": "Use when asked to review a plan, challenge a proposal, run a CEO review, poke holes in an approach, think bigger about scope, or decide whether to expand or reduce the plan."
+  },
+  "gstack-openclaw-investigate": {
+    "en": "Use when asked to debug, fix a bug, investigate an error, or do root cause analysis, and when users report errors, stack traces, unexpected behavior, or say something stopped working."
+  },
+  "gstack-openclaw-office-hours": {
+    "en": "Use when asked to brainstorm, evaluate whether an idea is worth building, run office hours, or think through a new product idea or design direction before any code is written."
+  },
+  "gstack-openclaw-retro": {
+    "en": "Weekly engineering retrospective. Analyzes commit history, work patterns, and code quality metrics with persistent history and trend tracking. Team-aware with per-person contributions, praise, and growth areas. Use when asked for weekly retro, what shipped this week, or engineering retrospective."
+  },
+  "gstack-upgrade": {
+    "en": "Upgrade gstack to the latest version. Detects global vs vendored install, runs the upgrade, and shows what's new. Use when asked to \"upgrade gstack\", \"update gstack\", or \"get latest version\". Voice triggers (speech-to-text aliases): \"upgrade the tools\", \"update the tools\", \"gee stack upgrade\", \"g stack upgrade\"."
+  },
+  "guard": {
+    "en": "Full safety mode: destructive command warnings + directory-scoped edits. Combines /careful (warns before rm -rf, DROP TABLE, force-push, etc.) with /freeze (blocks edits outside a specified directory). Use for maximum safety when touching prod or debugging live systems. Use when asked to \"guard mode\", \"full safety\", \"lock it down\", or \"maximum safety\". (gstack)"
+  },
+  "hackernews-frontpage": {
+    "en": "Scrape the Hacker News front page (titles, points, comment counts)."
+  },
+  "health": {
+    "en": "Code quality dashboard. Wraps existing project tools (type checker, linter, test runner, dead code detector, shell linter), computes a weighted composite 0-10 score, and tracks trends over time. Use when: \"health check\", \"code quality\", \"how healthy is the codebase\", \"run all checks\", \"quality score\". (gstack)"
+  },
+  "hmos-ability-insight-intent-generator": {
+    "en": "Generates OpenHarmony intent decorator code from user requirements with automatic decorator selection. Use when the user mentions \"intent\", \"@InsightIntent\", or needs to integrate app functionality with AI entry points. Provides decorator selection decision tree, parameter validation, build config checking, and compilation verification with auto-fix."
+  },
+  "hmos-account-kit-quicklogin-client": {
+    "en": "基于 HarmonyOS Account Kit 提供华为账号一键登录客户端接入指引，实现获取匿名手机号接口与华为账号一键登录组件集成。支持获取匿名手机号后一键登录页面跳转、失败Toast提示等。在用户提及\"华为账号一键登录\"、\"接入华为账号一键登录\"、\"Account Kit一键登录\"或要求实现华为账号一键登录功能时使用（当前仅支持原生ArkTS框架）"
+  },
+  "hmos-ads-kit-access": {
+    "en": "HarmonyOS Ads Kit 广告服务开发指南 — 涵盖6种广告形式(横幅/原生/激励/插屏/开屏/贴片)的完整接入文档、代码模板、自动化场景识别与植入决策引擎。触发关键词：广告接入, Ads Kit, 流量变现, 横幅广告, 原生广告, 激励广告, 插屏广告, 开屏广告, 贴片广告, OAID, 广告自动化接入, 广告植入, RTB, 广告错误排查"
+  },
+  "hmos-arkts-deprecated-interface-checker": {
+    "en": "检查 HarmonyOS 项目中的废弃 SDK 接口并提供修复建议。当需要清理废弃 API、升级 API 版本、优化代码质量或进行静态语法检查时使用。提供详细的迁移方案、修复优先级分类和代码示例。"
+  },
+  "hmos-arkts-knowledge-retriever": {
+    "en": "Retrieve grounded ArkTS references for pure non-UI ArkTS work and ArkTS API usage. Use this skill whenever the user is writing, reviewing, testing, validating, running, or debugging ArkTS code and the answer should be backed by repository sources such as `docs/ArkTS-Language-Guide/`, `docs/ArkTS-API-Reference/`, the linter-derived `docs/linter/ArkTS_Syntax_Knowledge_From_Linter.md`, and the bundled lightweight lint tool docs `docs/linter/linter-cli.md` plus `linter-cli/` instead of model memory. This skill is especially useful for syntax rules, ArkTS-specific restrictions, API/module/member lookup, common-library usage, lightweight lint workflow lookup, runnable example lookup, snippet validation context, and figuring out which repository section to trust before suggesting code or fixes."
+  },
+  "hmos-arkts-syntax-checker": {
+    "en": "检查并修复 HarmonyOS 项目的 ArkTS 语法错误，自动化构建项目。当需要编译项目、修复编译错误、生成 HAP/App 产物时使用。提供静态语法检查、错误自动修复、循环构建直到成功的完整工作流程。支持错误优先级分类（P0/P1/P2）、最大重试机制、构建产物自动定位。"
+  },
+  "hmos-arkui-develop-skill": {
+    "en": "REQUIRED before writing the first .ets file of a session. Fatal gotchas list + API quick-reference for HarmonyOS ArkTS/ArkUI development. Load this skill when writing or modifying .ets files, porting TypeScript to ArkTS, or building any ArkUI page, component, layout, navigation, dialog, state-driven UI, or animation. Covers ArkTS linter rules, forbidden syntax, null safety, struct/@Component constraints, V1/V2 state management, rendering control, API parameter correctness, and UI quality. Triggers — .ets, ArkTS, ArkUI, HarmonyOS, struct, @Component, TS-to-ArkTS migration, ArkUI build error, runtime crash."
+  },
+  "hmos-arkui-knowledge-retriever": {
+    "en": "ArkUI 知识检索层，按问题语境自动路由到 ArkTS 声明式或 NDK(C-API)知识库进行精准检索，不涉及代码生成或修改。触发场景：(1) 用户查询 ArkUI/ArkTS API 用法、参数细节或版本支持 (2) 验证组件/装饰器的正确用法 (3) 排查 ArkUI 编译错误码或运行时异常 (4) 询问状态管理 V1/V2 差异或迁移 (5) 查询 NDK / Native / C-API 接口或头文件 (6) 其他 skill 调用检索获取 API 证据。"
+  },
+  "hmos-arkui-longtake-transition": {
+    "en": "为鸿蒙(HarmonyOS)应用添加一镜到底转场效果。当用户提到一镜到底、转场动画、页面跳转动画、Navigation转场、卡片展开动画、图片查看大图动画、ezcustomtransition、自定义NavContentTransition、longtake、连续转场、沉浸式转场等关键词时，务必使用此skill。也适用于用户想要在鸿蒙应用中实现类似iOS的卡片展开、图片预览等流畅过渡效果的场景，即使他们没有明确提到\"一镜到底\"这个术语。"
+  },
+  "hmos-arkui-mvvm-pattern": {
+    "en": "HarmonyOS ArkUI MVVM 架构技能。适用于：(1) 项目分层设计 Model/ViewModel/View (2) 目录结构规划 (3) 组件职责与数据流规范 (4) 视图架构检视以及整改项目为MVVM模式等场景。在有以下请求时触发：1.在ArkUI中明确要求使用MVVM架构来添加或重构功能，并要求保持架构简洁。2.明确要求使用MVVM架构创建或改进视图模型，并将逻辑从视图中移出。3.修复状态管理混乱的问题。4.提升项目可测试性，通过拆分结构降低复杂度。5.将已有项目整改为 MVVM 架构。"
+  },
+  "hmos-arkui-navigation-transition": {
+    "en": "指导开发者为 ArkUI Navigation/NavDestination 配置转场动画。当用户提到 Navigation 转场、NavDestination 转场、转场动画、systemTransition、customTransition、customNavContentTransition、disableAnimation、页面跳转动画、禁用转场、自定义转场、可交互转场、系统转场等关键词时，务必使用此 skill。也适用于用户想要在鸿蒙应用中实现页面切换动画效果的场景，即使没有明确提到具体 API 名称。"
+  },
+  "hmos-arkui-scenario-development": {
+    "en": "HarmonyOS/鸿蒙 ArkUI 场景化开发技能，用于实现、排查或验证 ArkUI(.ets) 功能，并按需求(REQ)/开发(DEV)/修复(FIX)/验证(VAL)四阶段路由到4个一级场景：ARKUI-01 ArkUI基础语法（声明式UI、条件渲染、自定义组件、Builder/BuilderParam、AttributeModifier、组件复用）;ARKUI-02 基于UI框架构建基础代码逻辑（手势/键盘交互、路由导航、组件页面、弹窗菜单、动画转场、焦点走焦、综合应用页面骨架、自定义组件FrameNode/Modifier、弹窗进阶、布局组件、图形图像、滚动列表、文本组件）;ARKUI-03 状态管理（组件状态同步，V1/V2使用、V1/V2混用、状态变量相关扩展能力）;ARKUI-04 编译与运行时（编译构建失败、ANR、AppFreeze异常卡死、白屏、崩溃闪退，长列表卡顿丢帧、不跟手、资源加载慢等问题）。不适用：与 ArkUI 无关的原生开发、非 HarmonyOS 平台、CI/CD。"
+  },
+  "hmos-arkui-statemgt-migration": {
+    "en": "帮助开发者将ArkUI状态管理从V1迁移到V2。触发场景：(1) V1项目升级到V2；(2) 迁移@Component/@State/@Prop/@Link/@Observed/@ObjectLink/@Provide/@Consume/@Watch/@Reusable装饰器；(3) 迁移LocalStorage/AppStorage/PersistentStorage/Environment应用级状态；(4) 将ForEach/LazyForEach迁移到Repeat；(5) 解决animateTo在V2中的兼容问题；(6) 处理V1与V2混用场景；(7) 询问V1和V2装饰器对应关系或差异。"
+  },
+  "hmos-ascf-assistant": {
+    "en": "辅助开发者使用 ASCF 工具链开发 HarmonyOS 元服务。触发场景：(1) 任何提到 ASCF 的问题；(2) 检测到项目包含 ascf/ascf_src 目录（即 ASCF 项目）；(3) 需要生成元服务睫毛图；(4) 将小程序转换为 ASCF 元服务；(5) 开发ASCF元服务页面/组件/平台能力（华为账号登录、隐私托管、授权、支付、分享、web-view、定位等）；(6) 将 Taro/uni-app 项目适配为 ASCF 元服务；(7) HarmonyOS 4及以下版本元服务适配与发布。"
+  },
+  "hmos-ascf-convert-taro": {
+    "en": "辅助开发者将 Taro 项目适配（转换）为 ASCF 元服务。当需要在 Taro（React/Vue）项目中支持 ASCF 元服务平台，或将现有 Taro 项目迁移到 ASCF 时使用此技能。提供完整的环境搭建、项目配置、package.json 脚本、常见问题排查和发布流程。"
+  },
+  "hmos-ascf-convert-uniapp": {
+    "en": "辅助开发者将 uni-app 项目适配(转换)为 ASCF 元服务。当需要使用 uni-app（HBuilderX 或 CLI）开发 HarmonyOS 元服务（MP-HARMONY），或将现有 uni-app 项目迁移(转换)到 ASCF 时使用此技能。提供完整的环境搭建、HBuilderX 开发流程、CLI 配置、常见问题排查和上架审核指引。"
+  },
+  "hmos-atomicservice-assistant": {
+    "en": "辅助鸿蒙开发者构建元服务（Atomic Service / 免安装应用）。只要用户提到元服务、atomicService、免安装、atomic service，或遇到以下任意问题，都必须使用本 Skill：创建/改造元服务项目、@atomicservice API 报错、配置隐私托管、设置可信域名、静默登录/免密登录、接入鸿蒙支付、包大小超限、AtomicServiceEnhancedWeb vs ArkWeb、Navigation 分包路由、睫毛图标、ICP备案、上架审核被拒。提供规范说明、合规检查清单、代码示例和上架最佳实践。"
+  },
+  "hmos-design-visual-mobile": {
+    "en": "HarmonyOS 移动端页面视觉还原技能。基于仓库内设计规范文档与组件模板，生成符合 HarmonyOS Design Token 标准的高保真移动端 HTML 页面。触发场景：(1) 用户要求生成/还原 HarmonyOS 移动端页面 (2) 用户提供设计稿/截图/参考图，要求还原为 HarmonyOS 风格 HTML 页面 (3) 用户提到\"视觉还原\"/\"高保真页面\"/\"移动端页面\"并涉及 HarmonyOS，用于需要生成符合鸿蒙规范的移动端设计稿的场景"
+  },
+  "hmos-live-view-kit-build-location": {
+    "en": "HarmonyOS实况窗（LiveView）代码生成助手，支持创建、更新、停止实况窗。用户输入创建/更新/结束/完整/补全实况窗代码时触发，覆盖即时配送、打车、排队、计时、航班、高铁、共享租赁、运动锻炼、导航九大场景。"
+  },
+  "hmos-map-kit-map-creation": {
+    "en": "HarmonyOS Map Kit地图创建开发指南，支持地图组件创建、覆盖物管理、相机控制、图层配置等能力。 适用情形：用户要求创建/绘制/展示地图、添加地图标记、绘制图形、管理覆盖物交互、控制相机位置等。"
+  },
+  "hmos-map-kit-poi-search": {
+    "en": "HarmonyOS Map Kit位置搜索与POI检索开发指南。当用户明确要求开发实现（如\"编写代码\"、\"开发功能\"等）位置搜索、POI检索、地理编码、逆地理编码等功能代码时触发。适用于直接调用本地SDK接口获取地图元素的场景。 适用情形：关键字搜索地点、周边地点检索、地点详情查询、地址与坐标转换。"
+  },
+  "hmos-map-kit-route-planning": {
+    "en": "HarmonyOS Map Kit路径规划开发指南。 适用情形：用户明确要求开发实现（如\"编写代码\"、\"开发功能\"等）路径规划、批量算路、轨迹纠偏等功能代码时触发。"
+  },
+  "hmos-one-sdk-skill": {
+    "en": "⚠️ MUST LOAD before writing first .ets file that imports from @kit.*. This skill provides verified API signatures, import paths, error codes, permission requirements, and example code for 25 Kits (AccountKit, MediaKit, NetworkKit, ScanKit, LocationKit, PushKit etc.). Even if you have partial API info from other sources, this skill covers complete error codes and permission requirements they lack. Load when — (1) writing ANY @kit.* import; (2) calling Kit APIs like vibrator, Bluetooth, location, scan, account, push, network, health, wear, map, IAP, accessibility, i18n, form, widget, card, cross-device collaboration; (3) @kit.* compile errors (wrong namespace, missing exported member, type mismatch) — load BEFORE attempting fixes;"
+  },
+  "hmos-payment-kit-huawei-payment-integration": {
+    "en": "本技能面向 HarmonyOS Payment Kit 华为 / 鸿蒙支付接入排障，覆盖基础支付、签约代扣、平台合单、回调验签、沙盒联调、SpringBoot 服务端与 ArkTS 客户端适配，包含官方 Java‑SDK、Maven 构建、配置校验、常见报错排查，命中指定关键词即启用，输出接入指引与问题修复方案。"
+  },
+  "hmos-push-kit": {
+    "en": "华为Push Kit推送服务集成助手（Master Skill/大路由）。帮助开发者快速集成HarmonyOS推送功能，获取Push Token， 配置推送服务，开通场景化消息权益。支持发送通知消息、应用内通话消息、后台消息等场景。 ============================================================ 触发条件（只有满足以下意图时才触发）： ============================================================ ✅ 正确触发场景（开发者需要接入/开发推送功能）： - \"帮我在项目中接入华为推送\" - \"我要实现推送通知功能\" - \"如何接入push kit\" - \"帮我接入voip消息\" - \"接入后台消息\" - \"发送推送通知\" - \"获取push token\" - \"配置推送服务\" - \"开通推送消息权益\" ❌ 不触发场景（仅为询问、比较、测试、排查等）： - 询问对比/优缺点：\"鸿蒙push和苹果push区别\"、\"推送有什么优点\" - 否定意图：\"我不想接入推送\"、\"不需要推送\" - 仅输入关键词：\"推送\"、\"消息\"、\"后台\" - 测试/调试：\"push通知测试\"、\"push调试\" - 问题排查：\"push失败\"、\"推送异常\" - 配置咨询：\"token怎么配置\" - 带引号输入：\"push通知\"、\"推送消息\" 路由规则： - 若开发者需要单独获取Push Token → 路由到 hmos-push-kit-token - 若开发者需要发送通知消息 → 路由到 hmos-push-kit-notification（先检查Token状态） - 若开发者需要实现voip/应用内通话 → 路由到 hmos-push-kit-voip（先检查Token状态） - 若开发者需要接入后台消息 → 路由到 hmos-push-kit-background（先检查Token状态） - 若开发者请求模糊（未明确场景）→ 必须先询问具体场景，再路由到对应子Skill ⚠️ 重要：主Skill不生成任何场景化消息的具体代码！当开发者请求模糊时，必须先询问具体场景，再路由到对应子Skill生成完整代码。 此技能能够为开发者生成可直接编译通过的ArkTS代码，没有语法错误。"
+  },
+  "hmos-push-kit-background": {
+    "en": "推送后台消息助手。当开发者需要实现后台消息接收、数据静默更新、或消息缓存功能时触发。 ============================================================ 触发条件（只有满足以下意图时才触发）： ============================================================ ✅ 正确触发场景： - \"帮接入后台消息\" - \"实现数据静默更新\" - \"添加推送后台消息功能\" - \"推送后台消息\" - \"消息缓存到数据库\" - \"进程不在前台接收消息\" - \"需要接入后台消息功能\" ❌ 不触发场景： - 询问/概念：\"后台消息是什么\" - 否定意图：\"不需要后台消息\" - 仅输入关键词：\"后台\"、\"消息\" - 测试/调试：\"后台消息测试\" - 带引号输入：\"后台消息\" - 配置咨询：\"后台消息怎么配置\" ⚠️ 重要提醒： - 只要需要接入后台消息功能，**必须加载本 skill** - 本 skill 提供完整的后台消息接入指导，包括消息接收、数据处理、缓存策略等 - 后台消息接入涉及数据静默更新、缓存策略等完整流程，不能凭其他 skill 的通用说明（如\"同一 ability 接收多种消息类型\"）自行编写 此 Skill 专注于帮助开发者实现推送后台消息的接收和配置。 前置检查： - 在继续之前，会自动检查开发者是否已接入Push Token - 如果未接入Token，会引导开发者先使用 hmos-push-kit-token Skill"
+  },
+  "hmos-push-kit-notification": {
+    "en": "发送通知消息助手。当开发者需要实现推送通知功能、发送消息提醒、配置通知样式或点击动作时触发。 ============================================================ 触发条件（只有满足以下意图时才触发）： ============================================================ ✅ 正确触发场景： - \"帮我在项目中接入推送通知\" - \"实现推送消息功能\" - \"添加推送消息功能\" - \"接入通知消息\" - \"发送通知消息\" - \"配置推送前台接收\" ❌ 不触发场景： - 询问/概念：\"通知消息是什么\"、\"推送有啥优点\" - 否定意图：\"不需要通知消息\" - 仅输入关键词：\"通知\"、\"推送消息\" - 测试/调试：\"测试推送通知\" - 问题排查：\"推送失败\"、\"通知异常\" - 带引号输入：\"推送通知\" - 配置咨询：\"通知怎么配置\" 此 Skill 专注于帮助开发者实现通知消息的发送和配置。 前置检查： - 在继续之前，会自动检查开发者是否已接入Push Token - 如果未接入Token，会引导开发者先使用 hmos-push-kit-token Skill"
+  },
+  "hmos-push-kit-token": {
+    "en": "Push Token 获取助手。可作为单独接入能力使用。当开发者需要集成华为推送服务、首次获取 Push Token、或 Token 获取失败时触发。 ============================================================ 触发条件（只有满足以下意图时才触发）： ============================================================ ✅ 正确触发场景： - \"帮我接入push token\" - \"获取push token\" - \"首次集成推送功能\" - \"getToken调用失败\" - \"token获取报错1000900010\" - 需要在项目中添加getToken代码 ❌ 不触发场景： - 询问/概念：\"token是什么\"、\"为什么需要token\" - 对比问题：\"华为push和苹果push区别\" - 仅输入关键词：\"token\"、\"push\" - 否定意图：\"不想接入token\" - 带引号输入：\"push token\" - 配置咨询：\"token怎么配置\" 此 Skill 专注于帮助开发者正确实现 Push Token 的获取。 重要说明： - 此 Skill 可作为单独接入能力使用 - hmos-push-kit-notification 和 hmos-push-kit-voip 在接入前会先检查 Token 状态 - 如果未接入 Token，会引导开发者先使用此 Skill"
+  },
+  "hmos-push-kit-voip": {
+    "en": "推送应用内通话消息助手（VOIP）。当开发者需要实现语音/视频来电通知、voip功能、或呼叫接听界面时触发。 ============================================================ 触发条件（只有满足以下意图时才触发）： ============================================================ ✅ 正确触发场景： - \"帮接入voip消息\" - \"实现语音来电通知\" - \"添加推送应用内通话消息功能\" - \"接入视频通话功能\" - \"应用内通话消息\" - \"voip呼叫接听界面\" - \"需要接入voip功能\" ❌ 不触发场景： - 询问/概念：\"voip是什么\"、\"语音通话怎么实现\" - 否定意图：\"不需要voip\" - 仅输入关键词：\"voip\"、\"通话\" - 测试/调试：\"voip测试\" - 带引号输入：\"voip\"、\"语音通话\" - 配置咨询：\"voip怎么配置\" ⚠️ 重要提醒： - 只要需要接入 voip 功能，**必须加载本 skill** - 本 skill 提供完整的 voip 接入指导，包括 VoipCallService、CalleePage、CallComponent 等组件的创建 - voip 接入涉及来电处理、呼叫界面、状态上报等完整流程，不能凭其他 skill 的通用说明（如\"同一 ability 接收多种消息类型\"）自行编写 此 Skill 专注于帮助开发者实现应用内通话消息的推送功能。"
+  },
+  "hmos-scan-kit-customscan": {
+    "en": "帮助开发者快速接入华为 Scan Kit 自定义界面扫码能力，仅在需要支持完全自定义相机预览流 UI 界面、闪光灯控制、变焦、对焦等功能的场景使用"
+  },
+  "hmos-scan-kit-defaultscan": {
+    "en": "帮助开发者快速接入华为 Scan Kit 默认界面扫码能力，在不需要完全自定义相机界面、闪光灯控制、变焦、对焦等高级功能时优先使用"
+  },
+  "investigate": {
+    "en": "Systematic debugging with root cause investigation. Four phases: investigate, analyze, hypothesize, implement. Iron Law: no fixes without root cause. Use when asked to \"debug this\", \"fix this bug\", \"why is this broken\", \"investigate this error\", or \"root cause analysis\". Proactively invoke this skill (do NOT debug directly) when the user reports errors, 500 errors, stack traces, unexpected behavior, \"it was working yesterday\", or is troubleshooting why something stopped working. (gstack)"
+  },
+  "ios-clean": {
+    "en": "Remove the DebugBridge SPM package and all #if DEBUG wiring from an iOS app. Cleans up StateServer, DebugOverlay, accessor codegen output, and app-side hooks installed by /ios-qa. This is a convenience wrapper — the structural Release-build guard (Package.swift conditional + CI swift build -c release check) is the safety-critical path. Use when asked to \"clean the iOS debug bridge\", \"remove DebugBridge\", or \"strip the gstack iOS instrumentation\". (gstack) Voice triggers (speech-to-text aliases): \"clean the iOS debug bridge\", \"remove DebugBridge\", \"strip the gstack iOS instrumentation\"."
+  },
+  "ios-design-review": {
+    "en": "Visual design audit for iOS apps on real hardware. Connects to a real iPhone via the same StateServer as /ios-qa, screenshots every screen, evaluates against Apple HIG, DESIGN.md, and design best practices. Scores each dimension 0-10 with \"what would make it a 10\" framing — mirrors /plan-design-review for browser. For plan-stage design review (before implementation), use /plan-design-review. For live web visual audits, use /design-review. Use when asked to \"review the iOS design\", \"audit the iPhone app's visuals\", or \"design QA the iOS app\". (gstack) Voice triggers (speech-to-text aliases): \"review the iOS design\", \"audit the iPhone app's visuals\", \"design QA the iPhone app\"."
+  },
+  "ios-fix": {
+    "en": "Autonomous iOS bug fixer. Takes a bug found by /ios-qa, reads the source, writes the fix, rebuilds, redeploys, and verifies the fix on the real device. Closes the loop: find bug → fix bug → confirm fix — zero human intervention. Captures the pre-bug state snapshot as a regression test fixture, so the bug can never recur silently. Use when /ios-qa reports a bug and you want it fixed automatically, or when asked to \"fix this iOS bug\", \"patch the iPhone app\", or \"auto-fix the iOS issue\". (gstack) Voice triggers (speech-to-text aliases): \"fix the iOS bug\", \"patch the iPhone app\", \"auto-fix the iOS issue\"."
+  },
+  "ios-qa": {
+    "en": "Live-device iOS QA for SwiftUI apps. Connects to a real iPhone via USB CoreDevice IPv6 tunnel, reads Swift source to understand every screen, then runs a vision-driven agent loop: screenshot → analyze → decide → act → verify → repeat. All interaction happens via HTTP to an embedded StateServer in the app under test. Optionally exposes the device over Tailscale so remote agents (OpenClaw, Codex, any HTTP-capable agent) can run iOS QA from anywhere without touching the hardware. Use when asked to \"ios qa\", \"test my iPhone app\", \"find bugs on the device\", or \"qa the iOS app\". (gstack) Voice triggers (speech-to-text aliases): \"iOS quality check\", \"test the iPhone app\", \"run iOS QA\"."
+  },
+  "ios-sync": {
+    "en": "Regenerate the iOS debug bridge against the latest upstream gstack templates. Updates StateServer.swift, DebugOverlay.swift, Package.swift, and the typed @Observable state accessors. Use after you upgrade gstack or add new ViewModels/properties that need accessor coverage. Use when asked to \"resync the iOS debug bridge\", \"regenerate iOS accessors\", or \"update the gstack iOS instrumentation\". (gstack) Voice triggers (speech-to-text aliases): \"resync the iOS debug bridge\", \"regenerate iOS accessors\", \"update the gstack iOS instrumentation\"."
+  },
+  "jubenshi": {
+    "en": "把导演已有想法逐层开发成可分集、可写稿、可审稿、可改稿、可锁稿剧本的多专业 Skill 框架。负责岗位边界、交接、问题路由、滚动生产与上下文原则。"
+  },
+  "jubenshi-01-lead-writer": {
+    "en": "用于前期立项与创作定性：理解导演已有材料，识别必保戏剧资产，搭建核心故事雏形，确定受众、制作方式与统一叙事口径，输出《剧本开发案》。"
+  },
+  "jubenshi-02-plot-editor": {
+    "en": "用于宏观剧情开发：从已有故事前提判断时位，发展命运周期与叙事周期，设计主线支线、信息释放和戏剧资产落点，输出命运大纲、叙事大纲和时位细纲。"
+  },
+  "jubenshi-03-character-editor": {
+    "en": "用于人物开发与行为校验：按处、私、执、为、已推导人物来路、欲望、旧答案、行为模式、关系与相变，并判断剧情要求的关键行为是否成立。"
+  },
+  "jubenshi-04-world-editor": {
+    "en": "用于从故事与人物需求反推必要世界规则，建立最小可运行世界观、核心机制、组织、地点、道具和日常接口，避免百科式无效设定。"
+  },
+  "jubenshi-05-project-manager": {
+    "en": "把已经相对稳定的故事滚动拆成分集任务包，并为不同下游 Skill 准备最小充分上下文；负责首集标定、成稿回流和下一批任务包更新。"
+  },
+  "jubenshi-06-script-structure": {
+    "en": "用于把公共任务包与结构真相附录落成可写的微观结构：安排主节拍、小情节、动作、空间、物件、信息释放与单元接口。"
+  },
+  "jubenshi-07-script-draft": {
+    "en": "用于把已确认任务包和结构稿写成可见、可听、可表演的正式剧本；默认首集精写，后续按连续2至3集小批量生产。"
+  },
+  "jubenshi-08-script-review": {
+    "en": "诊断剧本执行质量。支持严格盲审与对照审两阶段：先记录真实观众认知，再对照任务、结构、人物和真相定位问题；只诊断，不直接重写。"
+  },
+  "jubenshi-09-script-revision": {
+    "en": "用于评估审稿意见并实施修订：先判断意见、建立保护清单，再按问题影响范围修改并做回归检查。"
+  },
+  "jubenshi-10-final-sync": {
+    "en": "用于全剧锁稿前统筹：检查跨集节奏、连续性、人物声音、信息与伏笔、AI感和格式一致性，并判断是否可以锁稿。"
+  },
+  "krea2-prompt-craft": {
+    "en": "Krea 2 Identity Edit V2 专属提示词工艺与多模态指令工程。基于 12.9B 单流 MMDiT 与 Qwen3-VL 4B 视觉语言编码器，专精双人/多角色同框跨场景重构、指称对齐(Grounding)、视域显式声明、光学受光点描写及 5-LoRA 配平。当需要为 Krea2 撰写分镜预演图、角色换装、重演、对抗动作提示词时使用。"
+  },
+  "land-and-deploy": {
+    "en": "Land and deploy workflow. Merges the PR, waits for CI and deploy, verifies production health via canary checks. Takes over after /ship creates the PR. Use when: \"merge\", \"land\", \"deploy\", \"merge and verify\", \"land it\", \"ship it to production\". (gstack)"
+  },
+  "landing-report": {
+    "en": "Read-only queue dashboard for workspace-aware ship. Shows which VERSION slots are currently claimed by open PRs, which sibling Conductor workspaces have WIP work likely to ship soon, and what slot /ship would pick next. No mutations — just a snapshot. Use when asked to \"landing report\", \"what's in the queue\", \"show me open PRs\", or \"which version do I claim next\". (gstack)"
+  },
+  "learn": {
+    "en": "Manage project learnings. Review, search, prune, and export what gstack has learned across sessions. Use when asked to \"what have we learned\", \"show learnings\", \"prune stale learnings\", or \"export learnings\". Proactively suggest when the user asks about past patterns or wonders \"didn't we fix this before?\""
+  },
+  "local-revision": {
+    "en": "按作者指定选区或光标修订当前场景正文，保持上下文边界，生成待作者接受的局部替换。"
+  },
+  "make-pdf": {
+    "en": "Turn any markdown file into a publication-quality PDF. Proper 1in margins, intelligent page breaks, page numbers, cover pages, running headers, curly quotes and em dashes, clickable TOC, diagonal DRAFT watermark. Not a draft artifact — a finished artifact. Use when asked to \"make a PDF\", \"export to PDF\", \"turn this markdown into a PDF\", or \"generate a document\". (gstack) Voice triggers (speech-to-text aliases): \"make this a pdf\", \"make it a pdf\", \"export to pdf\", \"turn this into a pdf\", \"turn this markdown into a pdf\", \"generate a pdf\", \"make a pdf from\", \"pdf this markdown\"."
+  },
+  "manju-cinematic-previs": {
+    "en": "漫剧次世代3D电影级镜头预演与背景反推管线（Stylized Semi-Realism 核心打法）"
+  },
+  "manju-script-mode": {
+    "en": "漫剧编剧模式运转手册：把大纲翻译成可拍剧本的五步流水线（冷启动反推 → 分集 → 建文件夹 → 写稿循环 → 每十集通看）。含四道门禁命令、落盘纪律、与 jubenshi 编剧室十一个岗位的接法。"
+  },
+  "manju-script-spec": {
+    "en": "漫剧文学剧本规范——场次六要素、格式契约、特殊标记、三层分离（文学剧本/分镜脚本/AI制作脚本）、容量基线，以及旧稿过规范的流程。编剧模式与导演模式共用。"
+  },
+  "material-sync": {
+    "en": "从已接受正文、作者定案或明确修改中提取叙事状态变化，生成可校验的 W/K/R/A/D 状态差异。严格区分客观事实、人物认知、暂定信息与未知项，不把推测升级为事实，不直接修改项目数据。"
+  },
+  "memory-curation": {
+    "en": "Use this skill when updating current-state.md, decisions.md, handoff.md, retrospective.md, memory-candidates.md, or deciding what project knowledge should be preserved, archived, retired, or discarded. Helps prevent memory pollution and prepare clean handoffs across long AI development cycles."
+  },
+  "minimax-h3-manju-production": {
+    "en": "MiniMax H3 漫剧生产级视音频工作流与导演编译协议。双核驱动：底层集成 AIKSK 14 层 Ref2VA 编译体系（语法、解耦、多模态槽位、音画分层），顶层集成 Phileiny 视听表演法典（实拍拆镜、防面瘫偷时间、身体部位主语动词、空间机位锁死）。专为 Krea2 预演生板与 ComfyUI 4090 极速交付定制。"
+  },
+  "motion-canvas": {
+    "en": "Create programmatic vector animations, motion graphics, and explainer presentations with TypeScript using the Motion Canvas library. Use when building animated explainer videos, technical tutorials, data visualizations, code walkthroughs, or dynamic presentation slides with precise timing and audio sync."
+  },
+  "music-video": {
+    "en": "为独立 MV 工作区撰写歌词驱动的分镜与镜头生成提示。"
+  },
+  "office-hours": {
+    "en": "YC Office Hours — two modes. Startup mode: six forcing questions that expose demand reality, status quo, desperate specificity, narrowest wedge, observation, and future-fit. Builder mode: design thinking brainstorming for side projects, hackathons, learning, and open source. Saves a design doc. Use when asked to \"brainstorm this\", \"I have an idea\", \"help me think through this\", \"office hours\", or \"is this worth building\". Proactively invoke this skill (do NOT answer directly) when the user describes a new product idea, asks whether something is worth building, wants to think through design decisions for something that doesn't exist yet, or is exploring a concept before any code is written. Use before /plan-ceo-review or /plan-eng-review. (gstack)"
+  },
+  "open-gstack-browser": {
+    "en": "Launch GStack Browser — AI-controlled Chromium with the sidebar extension baked in."
+  },
+  "pair-agent": {
+    "en": "Pair a remote AI agent with your browser. One command generates a setup key and prints instructions the other agent can follow to connect. Works with OpenClaw, Hermes, Codex, Cursor, or any agent that can make HTTP requests. The remote agent gets its own tab with scoped access (read+write by default, admin on request). Use when asked to \"pair agent\", \"connect agent\", \"share browser\", \"remote browser\", \"let another agent use my browser\", or \"give browser access\". (gstack) Voice triggers (speech-to-text aliases): \"pair agent\", \"connect agent\", \"share my browser\", \"remote browser access\"."
+  },
+  "plan-ceo-review": {
+    "en": "CEO/founder-mode plan review. Rethink the problem, find the 10-star product, challenge premises, expand scope when it creates a better product. Four modes: SCOPE EXPANSION (dream big), SELECTIVE EXPANSION (hold scope + cherry-pick expansions), HOLD SCOPE (maximum rigor), SCOPE REDUCTION (strip to essentials). Use when asked to \"think bigger\", \"expand scope\", \"strategy review\", \"rethink this\", or \"is this ambitious enough\". Proactively suggest when the user is questioning scope or ambition of a plan, or when the plan feels like it could be thinking bigger. (gstack)"
+  },
+  "plan-design-review": {
+    "en": "Designer's eye plan review — interactive, like CEO and Eng review. Rates each design dimension 0-10, explains what would make it a 10, then fixes the plan to get there. Works in plan mode. For live site visual audits, use /design-review. Use when asked to \"review the design plan\" or \"design critique\". Proactively suggest when the user has a plan with UI/UX components that should be reviewed before implementation. (gstack)"
+  },
+  "plan-devex-review": {
+    "en": "Interactive developer experience plan review. Explores developer personas, benchmarks against competitors, designs magical moments, and traces friction points before scoring. Three modes: DX EXPANSION (competitive advantage), DX POLISH (bulletproof every touchpoint), DX TRIAGE (critical gaps only). Use when asked to \"DX review\", \"developer experience audit\", \"devex review\", or \"API design review\". Proactively suggest when the user has a plan for developer-facing products (APIs, CLIs, SDKs, libraries, platforms, docs). (gstack) Voice triggers (speech-to-text aliases): \"dx review\", \"developer experience review\", \"devex review\", \"devex audit\", \"API design review\", \"onboarding review\"."
+  },
+  "plan-eng-review": {
+    "en": "Eng manager-mode plan review. Lock in the execution plan — architecture, data flow, diagrams, edge cases, test coverage, performance. Walks through issues interactively with opinionated recommendations. Use when asked to \"review the architecture\", \"engineering review\", or \"lock in the plan\". Proactively suggest when the user has a plan or design doc and is about to start coding — to catch architecture issues before implementation. (gstack) Voice triggers (speech-to-text aliases): \"tech review\", \"technical review\", \"plan engineering review\"."
+  },
+  "plan-tune": {
+    "en": "Self-tuning question sensitivity + developer psychographic for gstack (v1: observational). Review which AskUserQuestion prompts fire across gstack skills, set per-question preferences (never-ask / always-ask / ask-only-for-one-way), inspect the dual-track profile (what you declared vs what your behavior suggests), and enable/disable question tuning. Conversational interface — no CLI syntax required. Use when asked to \"tune questions\", \"stop asking me that\", \"too many questions\", \"show my profile\", \"what questions have I been asked\", \"show my vibe\", \"developer profile\", or \"turn off question tuning\". (gstack) Proactively suggest when the user says the same gstack question has come up before, or when they explicitly override a recommendation for the Nth time."
+  },
+  "qa": {
+    "en": "Systematically QA test a web application and fix bugs found. Runs QA testing, then iteratively fixes bugs in source code, committing each fix atomically and re-verifying. Use when asked to \"qa\", \"QA\", \"test this site\", \"find bugs\", \"test and fix\", or \"fix what's broken\". Proactively suggest when the user says a feature is ready for testing or asks \"does this work?\". Three tiers: Quick (critical/high only), Standard (+ medium), Exhaustive (+ cosmetic). Produces before/after health scores, fix evidence, and a ship-readiness summary. For report-only mode, use /qa-only. (gstack) Voice triggers (speech-to-text aliases): \"quality check\", \"test the app\", \"run QA\"."
+  },
+  "qa-only": {
+    "en": "Report-only QA testing. Systematically tests a web application and produces a structured report with health score, screenshots, and repro steps — but never fixes anything. Use when asked to \"just report bugs\", \"qa report only\", or \"test but don't fix\". For the full test-fix-verify loop, use /qa instead. Proactively suggest when the user wants a bug report without any code changes. (gstack) Voice triggers (speech-to-text aliases): \"bug report\", \"just check for bugs\"."
+  },
+  "remotion-video": {
+    "en": "使用 Remotion 框架以编程方式创建视频。用 React 组件定义视频内容，支持动画、字幕、3D场景与音乐可视化。 触发词： - \"用代码做视频\"、\"编程视频\"、\"React 视频\" - \"Remotion\"、\"remotion\" - \"/remotion-video\" 适用场景： - 程序化视频：(1) 批量生成 (2) 数据驱动（如年度总结）(3) 音乐可视化 (4) 自动字幕 - 教程讲解视频：(5) 技术概念可视化（如 CNN、算法）(6) 分层递进讲解 (7) AI 配音教程 - 3D 视频：(8) 产品展示/模型动画 (9) 卡通角色讲解 (10) 3D 数据可视化 (11) Logo 动画"
+  },
+  "retro": {
+    "en": "Weekly engineering retrospective. Analyzes commit history, work patterns, and code quality metrics with persistent history and trend tracking. Team-aware: breaks down per-person contributions with praise and growth areas. Use when asked to \"weekly retro\", \"what did we ship\", or \"engineering retrospective\". Proactively suggest at the end of a work week or sprint. (gstack)"
+  },
+  "reuse-gate": {
+    "en": "Use this skill before architecture contract or implementation to decide whether a task should be solved by no-code workflow, existing project code, mature libraries, official SDKs, CLI tools, templates, open-source references, glue code, or minimal custom code. Produces reuse-plan.md and blocks unnecessary self-built implementation."
+  },
+  "review": {
+    "en": "Pre-landing PR review. Analyzes diff against the base branch for SQL safety, LLM trust boundary violations, conditional side effects, and other structural issues. Use when asked to \"review this PR\", \"code review\", \"pre-landing review\", or \"check my diff\". Proactively suggest when the user is about to merge or land code changes. (gstack)"
+  },
+  "scene-cowrite": {
+    "en": "完成当前小段小说正文；遵守 Scene Envelope 的事实等级、人物认知、未来隔离和作者未定边界。"
+  },
+  "scrape": {
+    "en": "Pull data from a web page. First call on a new intent prototypes the flow via $B primitives and returns JSON. Subsequent calls on a matching intent route to a codified browser-skill and return in ~200ms. Read-only — for mutating flows (form fills, clicks, submissions), use /automate. Use when asked to \"scrape\", \"get data from\", \"pull\", \"extract from\", or \"what's on\" a page. (gstack)"
+  },
+  "setup-browser-cookies": {
+    "en": "Import cookies from your real Chromium browser into the headless browse session. Opens an interactive picker UI where you select which cookie domains to import. Use before QA testing authenticated pages. Use when asked to \"import cookies\", \"login to the site\", or \"authenticate the browser\". (gstack)"
+  },
+  "setup-deploy": {
+    "en": "Configure deployment settings for /land-and-deploy. Detects your deploy platform (Fly.io, Render, Vercel, Netlify, Heroku, GitHub Actions, custom), production URL, health check endpoints, and deploy status commands. Writes the configuration to AGENTS.md so all future deploys are automatic. Use when: \"setup deploy\", \"configure deployment\", \"set up land-and-deploy\", \"how do I deploy with gstack\", \"add deploy config\"."
+  },
+  "setup-gbrain": {
+    "en": "Set up gbrain for this coding agent: install the CLI, initialize a local PGLite or Supabase brain, register MCP, capture per-remote trust policy. One command from zero to \"gbrain is running, and this agent can call it.\" Use when: \"setup gbrain\", \"connect gbrain\", \"start gbrain\", \"install gbrain\", \"configure gbrain for this machine\". (gstack)"
+  },
+  "ship": {
+    "en": "Ship workflow: detect + merge base branch, run tests, review diff, bump VERSION, update CHANGELOG, commit, push, create PR. Use when asked to \"ship\", \"deploy\", \"push to main\", \"create a PR\", \"merge and push\", or \"get it deployed\". Proactively invoke this skill (do NOT push/PR directly) when the user says code is ready, asks about deploying, wants to push code up, or asks to create a PR. (gstack)"
+  },
+  "shot-previz": {
+    "en": "漫剧镜头预演模式：用 Krea2 静态关键帧在拍视频之前把每场戏\"预演\"一遍。零参考 txt2img 出电影感镜头 → 拆背景 → krea2edit 换装/换人重演。含 LoRA 真人阀配平、ref_boost 语义、动作词写狠、GPT 修图淘汰判定。用户说\"镜头预演 / 生成分镜图 / previz / 先出图看看表演 / 关键帧预演\"时使用。"
+  },
+  "skillify": {
+    "en": "Codify the most recent successful /scrape flow into a permanent browser-skill on disk. Future /scrape calls with the same intent run the codified script in ~200ms instead of re-driving the page. Walks back through the conversation, synthesizes script.ts + script.test.ts + fixture, runs the test in a temp dir, and asks before committing. Use when asked to \"skillify\", \"codify\", \"save this scrape\", or \"make this permanent\". (gstack)"
+  },
+  "spec": {
+    "en": "Turn vague intent into a precise, executable spec in five phases. Files the issue, optionally spawns a Claude Code agent in a fresh worktree, and lets /ship close the source issue on merge. Use when asked to \"spec this out\", \"file an issue\", \"write up a ticket\", \"make this a GitHub issue\", or \"turn this into a backlog item\". (gstack)"
+  },
+  "story-planning": {
+    "en": "将作者已有想法发展为可写、可检查、可继续修改的故事方案。负责人物动力、叙事方向、阶段结构、节点递推与未来候选，但不把规划自动升级为正文事实，也不直接修改正式项目状态。"
+  },
+  "storyboard-designer": {
+    "en": "数据驱动的分镜/镜头方案生成器。当用户给出小说文本、剧本片段或一场戏，要求生成分镜、镜头方案、storyboard、shot list、或将小说改编为可拍摄的镜头表时使用；也用于对已有分镜方案做数据质检/复核（动因、景别配额、转移矩阵、时长分布合规检查）。核心规则来自 MovieShots/Hollywood90/Kurosawa 等公开数据集的大样本统计反推，每条规则带数据出处与验证状态。"
+  },
+  "sync-gbrain": {
+    "en": "Keep gbrain current with this repo's code and refresh agent search guidance in AGENTS.md. Wraps the gstack-gbrain-sync orchestrator with state probing, native code-surface registration, capability checks, and a verdict block. Re-runnable, idempotent. Use when: \"sync gbrain\", \"refresh gbrain\", \"re-index this repo\", \"gbrain search isn't finding things\". (gstack)"
+  },
+  "test-audit": {
+    "en": "Find low-value or duplicate tests and the test-only code they keep alive. (gstack)"
+  },
+  "unfreeze": {
+    "en": "Clear the freeze boundary set by /freeze, allowing edits to all directories again. Use when you want to widen edit scope without ending the session. Use when asked to \"unfreeze\", \"unlock edits\", \"remove freeze\", or \"allow all edits\". (gstack)"
+  },
+  "video-generation": {
+    "en": "MiniMax H3 出片执行层。把已定稿的分镜与提示词变成 mp4：选路（首尾帧 / 参考生图）、提交 ComfyUI、轮询回收、透明底与黑底后处理、交付前验证。只管执行，不管创作。"
+  },
+  "video-prompt-writer": {
+    "en": "把分镜镜头方案翻译成 AI 视频模型可执行的抽卡提示词。当用户给出镜头表/分镜方案（尤其是 storyboard-designer 的输出），要求\"写提示词 / 生成 prompt / 抽卡文本 / 转成即梦·Seedance·可灵·Kling 提示词\"时使用；也用于单镜提示词改写、负约束（negative prompt）编写、多机位覆盖（Master/CU/Insert）提示词组生成。核心原则：序列前缀钢印一致、资产 Tag 调用而非重述、高压约束限制 AI 演绎、模型方言分版本维护。"
+  },
+  "world-development": {
+    "en": "在作者认可主脑后建立能生人物的世界骨架，按优先级选择字段，停止于人物位置。"
+  }
+}

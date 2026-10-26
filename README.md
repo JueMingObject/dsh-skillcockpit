@@ -14,8 +14,12 @@
    - **穿透搜索**：输入关键字时实时全局检索，命中的技能自动标注所属分组标签。
 2. **🎯 完全可自定义的分组引擎**
    - 内置智能分类规则（`gstack` 专属工作流组、鸿蒙/ArkUI、漫剧/视听、编剧文学、工程手艺、产品策划、运营增长、通用工具）。
-   - 支持用户通过 `~/.dsh/cockpit.json` 或在界面中自定义组名、图标（Emoji）、排序权重与正则/通配符匹配规则。
-3. **📊 驾驶舱面板 (Cockpit Panel)**
+   - 支持通过 `localStorage['dsh.cockpit.config']` 自定义组名、图标（Emoji）、排序权重与通配符匹配规则。
+3. **🈶 中文介绍层**
+   - 技能 frontmatter 大多是英文：菜单行显示**中文名**，原始英文标识保留在右侧（`无头浏览器 browse`），选中后插入的仍是 `browse`，不会改变实际调用的技能。
+   - 支持中文搜索：打 `/浏览器` 就能找到 `browse`。
+   - 自带 154 个技能里 83 条人工中文化；剩下的本来就有中文简介，直接沿用。可用 `localStorage['dsh.cockpit.zh']` 覆盖任意一条。
+4. **📊 驾驶舱面板 (Cockpit Panel)**
    - 挂载于 DSH 侧边栏/右侧栏，分类浏览所有可用技能与 MCP 工具，支持一键点击填入。
    - 实时监控后台命令/编译进程，一览无余。
 
@@ -105,6 +109,35 @@ Get-Process "DeepSeek Harness" | Select-Object Id, StartTime
 - `replaceNative: false` 时保留 DSH 原生的平铺技能列表（默认是接管它，只留分组列表）。
 
 改完后刷新页面即可（`localStorage` 在页面加载时读取）。
+
+---
+
+## 🈶 技能中文介绍
+
+客户端 bundle 是单个文件，运行时没法去读兄弟 JSON，所以中文层是**构建时嵌入** `client.js` 的，有三个文件在管这件事：
+
+| 文件 | 是什么 | 谁改 |
+|---|---|---|
+| `zh-skills.json` | 从各技能根采集到的 `name` + 英文 `description` | `node scripts/collect-skills.mjs` 自动生成，别手改 |
+| `zh-i18n.json` | 人工翻译：`{ "name": { "label": "中文名", "desc": "一句话简介" } }` | **手写，加技能时在这里补** |
+| `client.js` 里的 `SKILL_ZH` 块 | 上面两份合并后的成品 | `node scripts/embed-i18n.mjs` 生成 |
+
+日常流程：
+
+```powershell
+node scripts/collect-skills.mjs   # 装了新技能后重新采集
+# 在 zh-i18n.json 里补中文（缺的会自己列出来）
+node scripts/embed-i18n.mjs       # 嵌入 client.js，重启 DSH 生效
+node scripts/embed-i18n.mjs --check   # 检查嵌入块是否过期（CI 用）
+node --test tests/client.test.mjs     # 15 条协议断言
+```
+
+几个刻意定下的规则：
+
+- **`label` 只改显示名，不改标识符。** 菜单行 `无头浏览器` 右边标着 `browse`，按下去插入的仍是 `/browse `。翻译永远不会让菜单插入一个不存在的技能。
+- **缺翻译时回退原文。** 没有中文条目的技能照常显示自己的英文简介，不会变成空白。
+- **中文键也参与搜索。** 匹配范围是 `name` / 原简介 / 中文名 / 中文简介四者。
+- **用户覆盖层**：`localStorage['dsh.cockpit.zh'] = { "browse": { "label": "我的浏览器", "desc": "..." } }`，也接受 `{ label, desc }` 这种更好读的写法；每行覆盖内置值。
 
 ---
 

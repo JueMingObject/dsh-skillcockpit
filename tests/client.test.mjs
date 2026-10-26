@@ -54,7 +54,10 @@ function mount(options = {}) {
       }
     },
     localStorage: {
-      store: options.storedConfig === undefined ? {} : { 'dsh.cockpit.config': options.storedConfig },
+      store: {
+        ...(options.storedConfig === undefined ? {} : { 'dsh.cockpit.config': options.storedConfig }),
+        ...(options.storedZh === undefined ? {} : { 'dsh.cockpit.zh': options.storedZh })
+      },
       getItem(key) { return this.store[key] ?? null },
       setItem(key, value) { this.store[key] = value }
     },
@@ -221,3 +224,48 @@ test('a subagent session offers no skills', async () => {
   const { source } = mount({ subagent: true })
   assert.deepEqual(plain(await ask(source, '')), [])
 })
+
+// --- Chinese layer -------------------------------------------------------
+//
+// The menu renders `label` as a row's primary text and the raw `name` beside it
+// as an alias (`ui-input-trigger/src/client/MenuView.tsx:178-181`), so the
+// translation renames a row without hiding the identifier people type.
+
+test('a translated skill shows a Chinese label and keeps its identifier', async () => {
+  const { source } = mount()
+  const rows = plain(await ask(source, 'gstack/'))
+  const browse = rows.find(row => row.name === 'browse')
+  assert.equal(browse.label, '无头浏览器')
+  assert.equal(browse.description, '快速无头浏览器，用于站点 QA 与自测')
+  // The pick still inserts the English identifier, never the label.
+  assert.deepEqual(pick(source, browse), { text: '/browse ' })
+})
+
+test('an untranslated skill keeps its own description and gets no label', async () => {
+  const { source } = mount()
+  const rows = plain(await ask(source, 'custom'))
+  const custom = rows.find(row => row.name === 'totally-custom-thing')
+  assert.equal(custom.label, undefined)
+  assert.equal(custom.description, 'A skill nobody classified.')
+})
+
+test('typing Chinese finds the skill through its translation', async () => {
+  const { source } = mount()
+  assert.ok(plain(await ask(source, '浏览器')).some(row => row.name === 'browse'),
+    'the translated label is searchable')
+  assert.ok(plain(await ask(source, '无头')).some(row => row.name === 'browse'),
+    'the translated description is searchable')
+})
+
+test('a stored translation overrides the built-in one', async () => {
+  const storedZh = JSON.stringify({ browse: { label: '我的浏览器', desc: '自定义简介' } })
+  const { source } = mount({ storedZh })
+  const browse = plain(await ask(source, 'gstack/')).find(row => row.name === 'browse')
+  assert.equal(browse.label, '我的浏览器')
+  assert.equal(browse.description, '自定义简介')
+  // A `{ label, desc }` row is accepted too, so people can paste readable JSON.
+  const readable = mount({ storedZh: JSON.stringify({ qa: { label: '质检', desc: '手写' } }) })
+  const qa = plain(await ask(readable.source, 'gstack/')).find(row => row.name === 'qa')
+  assert.equal(qa.label, '质检')
+})
+
