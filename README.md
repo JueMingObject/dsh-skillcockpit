@@ -23,33 +23,72 @@
 
 ## 🛠️ 安装方法
 
-### 方式一：符号链接（推荐开发/日常使用）
-将本仓库软链至 DSH 插件目录：
-```powershell
-New-Item -ItemType SymbolicLink -Path "$HOME\.dsh\plugins\dsh-cockpit" -Target "G:\AI\Claude-Workspace\Projects\dsh-cockpit"
-```
+DSH 的插件不是一个目录放进去就生效的，要同时满足三件事，**并且重启 DSH**（host 只在启动时扫描已加载的 Loader 条目，刷新页面不够）。
 
-### 方式二：手动放入
-将构建产物复制到 `~/.dsh/plugins/dsh-cockpit/` 即可。
+以 `desktop` profile 为例（`$HOME\.dsh\profiles\desktop`）：
+
+1. **链接包目录**（开发时用 junction 指向本仓库，改完不用重装）：
+
+   ```powershell
+   New-Item -ItemType Junction -Path "$HOME\.dsh\plugins\dsh-cockpit" -Target "G:\AI\Claude-Workspace\Projects\dsh-cockpit"
+   ```
+
+2. **在 profile 的 `package.json` 里声明依赖**：
+
+   ```json
+   "@local/dsh-cockpit": "link:../../plugins/dsh-cockpit"
+   ```
+
+   然后在该 profile 目录里装一次，让 `node_modules/@local/dsh-cockpit` 真的存在：
+
+   ```powershell
+   node "G:\AI\Dsh\resources\runtime\pnpm\bin\pnpm.mjs" install
+   ```
+
+3. **在 profile 的 `cordis.patch.yml` 里挂载**（没有这一步，包在 node_modules 里也不会被加载）：
+
+   ```yaml
+   - insert:
+       - id: dsh-cockpit
+         name: "@local/dsh-cockpit"
+   ```
+
+4. **重启 DSH**。斜杠菜单马上就是分组形态。
+
+### 校验装没装对
+
+```powershell
+# 1. 链接是否指向工程
+Get-Item "$HOME\.dsh\profiles\desktop\node_modules\@local\dsh-cockpit" | Select-Object Target
+# 2. manifest 是否带 dsh.client 声明（没有它 host 会静默跳过）
+Get-Content "$HOME\.dsh\profiles\desktop\node_modules\@local\dsh-cockpit\package.json" -Raw | Select-String 'dsh'
+# 3. 运行中的进程启动时间是否晚于安装时间
+Get-Process "DeepSeek Harness" | Select-Object Id, StartTime
+```
 
 ---
 
-## ⚙️ 自定义配置 (`~/.dsh/cockpit.json`)
+## ⚙️ 自定义分组
 
-```json5
+分组配置存在浏览器的 `localStorage['dsh.cockpit.config']`，形如：
+
+```json
 {
+  "replaceNative": true,
   "groups": [
     {
       "id": "gstack",
-      "name": "⚡ gstack 工作流全家桶",
+      "name": "⚡ gstack 工作流",
       "priority": 100,
-      "patterns": ["gstack*", "browse", "qa*", "ship", "canary", "review", "investigate", "autoplan", "devex-review", "careful", "freeze*", "learn", "retro", "spec"]
+      "icon": "⚡",
+      "description": "全流程自动化交付、代码审查、浏览器测试与发布套件",
+      "patterns": ["gstack*", "browse", "qa", "ship", "canary", "review", "investigate", "autoplan", "devex-review", "careful", "freeze", "learn", "retro", "spec"]
     },
     {
       "id": "hmos",
       "name": "📱 鸿蒙与 ArkUI",
       "priority": 90,
-      "patterns": ["hmos-*", "arkui*"]
+      "patterns": ["hmos-*", "arkui*", "arkuix*"]
     },
     {
       "id": "media",
@@ -60,6 +99,12 @@ New-Item -ItemType SymbolicLink -Path "$HOME\.dsh\plugins\dsh-cockpit" -Target "
   ]
 }
 ```
+
+- `patterns` 支持 `前缀*` / `*后缀` / `*包含*` 三种通配；先匹配到的分组胜出，未命中的落到 `other`。
+- `priority` 越大越靠前。
+- `replaceNative: false` 时保留 DSH 原生的平铺技能列表（默认是接管它，只留分组列表）。
+
+改完后刷新页面即可（`localStorage` 在页面加载时读取）。
 
 ---
 

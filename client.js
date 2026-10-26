@@ -1,11 +1,22 @@
-// DSH Skill Cockpit Client Plugin Bundle
+// DSH Skill Cockpit — client bundle.
+//
+// Turns the flat `/` skill list into grouped folders with Tab drill-down, and
+// (下一步) adds a cockpit tab to the right sidebar.
+//
+// Contract notes (verified against the harness sources, do not guess):
+//   * `InputTriggerCandidate.drill` is a BOOLEAN flag, not a callback.
+//     `.../ui-input-trigger/src/types.ts:72`
+//   * A drill pick reaches `onPick` with `action: 'drill'`; the text it returns
+//     replaces the token and, with `continue: true`, re-opens the menu on the
+//     new query. `.../ui-input-trigger/src/client/controller.ts:591`
+//   * `header(session, req)` publishes breadcrumbs; a crumb pick routes back
+//     through `onPick` with `action: 'drill'`. (same file, `pickCrumb`)
+//   * Skill catalog RPC: `ctx.remote.skills.list({ sessionId }, signal)` returns
+//     `{ ok, value: { skills } }`.
 window.__ModuleLoader__.load({
-  id: '@dsh-community/dsh-cockpit',
+  id: '@local/dsh-cockpit',
   factory: function (require) {
-    var React = require('react');
-    var h = React.createElement;
-
-    // --- 1. Built-in Configurations & Wildcard Match Engine ---
+    // --- 1. Groups and the wildcard matcher ---
     var DEFAULT_GROUPS = [
       {
         id: 'gstack',
@@ -103,7 +114,7 @@ window.__ModuleLoader__.load({
           'icon-generator', 'baoyu-*', 'obsidian-*', 'accessibility', 'flue'
         ]
       }
-    ];
+    ]
 
     var FALLBACK_GROUP = {
       id: 'other',
@@ -112,558 +123,330 @@ window.__ModuleLoader__.load({
       icon: '📦',
       description: '其他可用系统与自定义扩展技能',
       patterns: ['*']
-    };
+    }
 
+    /** Leading/trailing `*` wildcard match: `gstack*`, `*xhs*`, `craft-*`. */
     function matchPattern(name, pattern) {
-      if (pattern === '*') return true;
-      if (pattern.slice(-1) === '*') return name.indexOf(pattern.slice(0, -1)) === 0;
-      if (pattern.charAt(0) === '*') return name.indexOf(pattern.slice(1), name.length - pattern.length + 1) !== -1;
-      return name === pattern;
+      if (pattern === '*') return true
+      var prefix = pattern.charAt(0) !== '*'
+      var suffix = pattern.charAt(pattern.length - 1) !== '*'
+      var core = pattern
+      if (!prefix) core = core.slice(1)
+      if (!suffix) core = core.slice(0, -1)
+      if (core === '') return true
+      if (prefix && suffix) return name === core
+      if (prefix) return name.slice(0, core.length) === core
+      if (suffix) return name.length >= core.length && name.slice(-core.length) === core
+      return name.indexOf(core) !== -1
     }
 
     function matchSkillGroup(name, groups) {
-      var sorted = groups.slice().sort(function (a, b) { return b.priority - a.priority; });
+      var sorted = sortGroups(groups)
       for (var i = 0; i < sorted.length; i++) {
-        var g = sorted[i];
-        for (var j = 0; j < g.patterns.length; j++) {
-          if (matchPattern(name, g.patterns[j])) return g;
+        var patterns = sorted[i].patterns || []
+        for (var j = 0; j < patterns.length; j++) {
+          if (matchPattern(name, patterns[j])) return sorted[i]
         }
       }
-      return FALLBACK_GROUP;
+      return FALLBACK_GROUP
+    }
+
+    function sortGroups(groups) {
+      return groups.slice().sort(function (a, b) {
+        return (b.priority || 0) - (a.priority || 0)
+      })
     }
 
     function loadCockpitConfig() {
       try {
         if (typeof localStorage !== 'undefined') {
-          var raw = localStorage.getItem('dsh.cockpit.config');
+          var raw = localStorage.getItem('dsh.cockpit.config')
           if (raw) {
-            var parsed = JSON.parse(raw);
-            if (Array.isArray(parsed.groups) && parsed.groups.length > 0) return parsed;
+            var parsed = JSON.parse(raw)
+            if (parsed && Array.isArray(parsed.groups) && parsed.groups.length > 0) {
+              return { groups: parsed.groups, replaceNative: parsed.replaceNative !== false }
+            }
           }
         }
-      } catch (e) {}
-      return { groups: DEFAULT_GROUPS };
+      } catch (error) {
+        console.warn('[dsh-cockpit] config unreadable, using defaults:', error)
+      }
+      return { groups: DEFAULT_GROUPS, replaceNative: true }
     }
 
-    function saveCockpitConfig(cfg) {
+    function saveCockpitConfig(config) {
       try {
         if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('dsh.cockpit.config', JSON.stringify(cfg));
+          localStorage.setItem('dsh.cockpit.config', JSON.stringify(config))
         }
-      } catch (e) {}
-    }
-
-    // --- 2. Cockpit Panel Component (Rightbar) ---
-    function CockpitPanel(props) {
-      var skills = props.skills || [];
-      var onInsertSkill = props.onInsertSkill;
-
-      var configState = React.useState(loadCockpitConfig());
-      var config = configState[0];
-      var setConfig = configState[1];
-
-      var searchState = React.useState('');
-      var search = searchState[0];
-      var setSearch = searchState[1];
-
-      var tabState = React.useState('skills');
-      var activeTab = tabState[0];
-      var setActiveTab = tabState[1];
-
-      var groupSelectState = React.useState('all');
-      var selectedGroupId = groupSelectState[0];
-      var setSelectedGroupId = groupSelectState[1];
-
-      var jsonState = React.useState(JSON.stringify(config, null, 2));
-      var jsonConfigStr = jsonState[0];
-      var setJsonConfigStr = jsonState[1];
-
-      var msgState = React.useState('');
-      var saveMessage = msgState[0];
-      var setSaveMessage = msgState[1];
-
-      var groupStats = React.useMemo(function () {
-        var map = new Map();
-        for (var i = 0; i < config.groups.length; i++) map.set(config.groups[i].id, []);
-        map.set(FALLBACK_GROUP.id, []);
-
-        for (var j = 0; j < skills.length; j++) {
-          var s = skills[j];
-          var g = matchSkillGroup(s.name, config.groups);
-          var list = map.get(g.id) || map.get(FALLBACK_GROUP.id);
-          list.push(s);
-        }
-        return map;
-      }, [skills, config]);
-
-      var filteredSkills = React.useMemo(function () {
-        var list = skills;
-        if (selectedGroupId !== 'all') {
-          list = groupStats.get(selectedGroupId) || [];
-        }
-        var q = search.trim().toLowerCase();
-        if (!q) return list;
-        return list.filter(function (s) {
-          return s.name.toLowerCase().indexOf(q) !== -1 || (s.description || '').toLowerCase().indexOf(q) !== -1;
-        });
-      }, [skills, selectedGroupId, groupStats, search]);
-
-      var handleSaveJson = function () {
-        try {
-          var parsed = JSON.parse(jsonConfigStr);
-          if (Array.isArray(parsed.groups)) {
-            saveCockpitConfig(parsed);
-            setConfig(parsed);
-            setSaveMessage('✅ 保存成功！已更新配置');
-            setTimeout(function () { setSaveMessage(''); }, 3000);
-          } else {
-            setSaveMessage('❌ 格式错误：缺少 groups 数组');
-          }
-        } catch (e) {
-          setSaveMessage('❌ JSON 解析失败: ' + e.message);
-        }
-      };
-
-      var handleResetDefaults = function () {
-        var def = { groups: DEFAULT_GROUPS };
-        saveCockpitConfig(def);
-        setConfig(def);
-        setJsonConfigStr(JSON.stringify(def, null, 2));
-        setSaveMessage('✅ 已重置为官方默认分类');
-        setTimeout(function () { setSaveMessage(''); }, 3000);
-      };
-
-      return h('div', {
-        style: {
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-          backgroundColor: 'var(--dsh-bg-base, #1e1e24)',
-          color: 'var(--dsh-text-base, #e2e8f0)',
-          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          fontSize: '13px',
-          overflow: 'hidden'
-        }
-      },
-        // Header
-        h('div', {
-          style: {
-            display: 'flex',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
-            padding: '8px 12px',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'rgba(0,0,0,0.1)'
-          }
-        },
-          h('div', { style: { fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' } },
-            h('span', null, '🧭'), ' 研发驾驶舱'
-          ),
-          h('div', { style: { display: 'flex', gap: '4px' } },
-            h('button', {
-              onClick: function () { setActiveTab('skills'); },
-              style: {
-                padding: '3px 8px',
-                borderRadius: '4px',
-                border: 'none',
-                cursor: 'pointer',
-                background: activeTab === 'skills' ? 'var(--dsh-accent, #3b82f6)' : 'transparent',
-                color: '#fff',
-                fontSize: '12px'
-              }
-            }, '技能库 (' + skills.length + ')'),
-            h('button', {
-              onClick: function () { setActiveTab('settings'); },
-              style: {
-                padding: '3px 8px',
-                borderRadius: '4px',
-                border: 'none',
-                cursor: 'pointer',
-                background: activeTab === 'settings' ? 'var(--dsh-accent, #3b82f6)' : 'transparent',
-                color: '#fff',
-                fontSize: '12px'
-              }
-            }, '⚙️ 分类配置')
-          )
-        ),
-
-        activeTab === 'skills' ? (
-          h('div', { style: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 } },
-            // Search
-            h('div', { style: { padding: '8px 12px' } },
-              h('input', {
-                type: 'text',
-                placeholder: '搜索技能名、描述...',
-                value: search,
-                onChange: function (e) { setSearch(e.target.value); },
-                style: {
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  padding: '6px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  background: 'rgba(0,0,0,0.2)',
-                  color: '#fff',
-                  fontSize: '12px',
-                  outline: 'none'
-                }
-              })
-            ),
-            // Group chips
-            h('div', {
-              style: {
-                display: 'flex',
-                gap: '6px',
-                overflowX: 'auto',
-                padding: '0 12px 8px 12px',
-                scrollbarWidth: 'none'
-              }
-            },
-              h('button', {
-                onClick: function () { setSelectedGroupId('all'); },
-                style: {
-                  padding: '3px 8px',
-                  borderRadius: '12px',
-                  border: '1px solid ' + (selectedGroupId === 'all' ? '#3b82f6' : 'rgba(255,255,255,0.1)'),
-                  background: selectedGroupId === 'all' ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.05)',
-                  color: selectedGroupId === 'all' ? '#60a5fa' : '#94a3b8',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  fontSize: '11px'
-                }
-              }, '全部 (' + skills.length + ')'),
-              config.groups.map(function (g) {
-                var cnt = (groupStats.get(g.id) || []).length;
-                if (cnt === 0) return null;
-                var isSel = selectedGroupId === g.id;
-                return h('button', {
-                  key: g.id,
-                  onClick: function () { setSelectedGroupId(g.id); },
-                  style: {
-                    padding: '3px 8px',
-                    borderRadius: '12px',
-                    border: '1px solid ' + (isSel ? '#3b82f6' : 'rgba(255,255,255,0.1)'),
-                    background: isSel ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.05)',
-                    color: isSel ? '#60a5fa' : '#94a3b8',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    fontSize: '11px'
-                  }
-                }, (g.icon || '') + ' ' + (g.name.split(' ')[1] || g.name) + ' (' + cnt + ')');
-              })
-            ),
-            // Skill cards
-            h('div', {
-              style: {
-                flex: 1,
-                overflowY: 'auto',
-                padding: '4px 12px 12px 12px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px'
-              }
-            },
-              filteredSkills.length === 0 ?
-                h('div', { style: { textAlign: 'center', padding: '30px 0', color: '#64748b' } }, '没有找到匹配的技能') :
-                filteredSkills.map(function (s) {
-                  var g = matchSkillGroup(s.name, config.groups);
-                  return h('div', {
-                    key: s.name,
-                    style: {
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      borderRadius: '6px',
-                      padding: '8px 10px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '4px'
-                    }
-                  },
-                    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
-                      h('div', { style: { fontWeight: 600, color: '#f8fafc', fontSize: '13px' } }, s.name),
-                      h('span', {
-                        style: {
-                          fontSize: '10px',
-                          padding: '1px 6px',
-                          borderRadius: '4px',
-                          background: 'rgba(255,255,255,0.08)',
-                          color: '#94a3b8'
-                        }
-                      }, (g.icon || '') + ' ' + (g.name.split(' ')[1] || g.name))
-                    ),
-                    s.description ? h('div', {
-                      style: {
-                        fontSize: '11px',
-                        color: '#94a3b8',
-                        lineHeight: '1.4',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
-                      }
-                    }, s.description) : null,
-                    h('div', { style: { display: 'flex', justifyContent: 'flex-end', marginTop: '2px' } },
-                      h('button', {
-                        onClick: function () { onInsertSkill && onInsertSkill(s.name); },
-                        style: {
-                          background: 'rgba(59,130,246,0.15)',
-                          border: '1px solid rgba(59,130,246,0.3)',
-                          color: '#60a5fa',
-                          borderRadius: '4px',
-                          padding: '2px 8px',
-                          fontSize: '11px',
-                          cursor: 'pointer'
-                        }
-                      }, '填入对话 /')
-                    )
-                  );
-                })
-            )
-          )
-        ) : (
-          // Settings Tab
-          h('div', {
-            style: {
-              display: 'flex',
-              flexDirection: 'column',
-              flex: 1,
-              padding: '12px',
-              gap: '8px',
-              minHeight: 0
-            }
-          },
-            h('div', { style: { color: '#94a3b8', fontSize: '12px', lineHeight: 1.4 } },
-              '💡 在此直接编辑分组名称、优先级（越大越优先）及通配符规则（如 gstack*, hmos-*）。'
-            ),
-            h('textarea', {
-              value: jsonConfigStr,
-              onChange: function (e) { setJsonConfigStr(e.target.value); },
-              style: {
-                flex: 1,
-                width: '100%',
-                boxSizing: 'border-box',
-                background: 'rgba(0,0,0,0.3)',
-                color: '#38bdf8',
-                fontFamily: 'Consolas, monospace',
-                fontSize: '11px',
-                padding: '8px',
-                borderRadius: '6px',
-                border: '1px solid rgba(255,255,255,0.15)',
-                resize: 'none',
-                outline: 'none'
-              }
-            }),
-            saveMessage ? h('div', { style: { fontSize: '11px', fontWeight: 600 } }, saveMessage) : null,
-            h('div', { style: { display: 'flex', gap: '8px', justifyContent: 'flex-end' } },
-              h('button', {
-                onClick: handleResetDefaults,
-                style: {
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  color: '#cbd5e1',
-                  borderRadius: '4px',
-                  padding: '4px 10px',
-                  cursor: 'pointer',
-                  fontSize: '12px'
-                }
-              }, '恢复默认'),
-              h('button', {
-                onClick: handleSaveJson,
-                style: {
-                  background: '#2563eb',
-                  border: 'none',
-                  color: '#fff',
-                  borderRadius: '4px',
-                  padding: '4px 14px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: '12px'
-                }
-              }, '保存生效')
-            )
-          )
-        )
-      );
-    }
-
-    // --- 3. DSH Client Plugin Exports & Hooking ---
-    return {
-      inject: ['inputTriggers', 'sessions', 'slots', 'locale', 'remote', 'remote.skills', 'sidebarRight'],
-      apply: function (ctx) {
-        console.log('[dsh-cockpit] Applying DSH Skill Cockpit plugin...');
-
-        var skillsRemote = ctx.remote && ctx.remote.skills;
-        var sessions = ctx.sessions;
-        var inputTriggers = ctx.get('inputTriggers');
-        var TAB_KIND = 'cockpit';
-
-        // 1. Rightbar Cockpit Tab
-        if (ctx.sidebarRightTabs && ctx.slots) {
-          try {
-            ctx.sidebarRightTabs.register({
-              kind: TAB_KIND,
-              title: function () { return '🧭 驾驶舱'; },
-              priority: 15
-            });
-
-            ctx.slots.inject('sidebar.right.pane.tab', function () {
-              return ctx.slots.register({
-                name: 'sidebar.right.pane.tab',
-                key: TAB_KIND
-              }, function (props) {
-                var skillListState = React.useState([]);
-                var skillsList = skillListState[0];
-                var setSkillsList = skillListState[1];
-
-                React.useEffect(function () {
-                  var active = true;
-                  var abort = new AbortController();
-                  var sess = sessions && sessions.sessionOf ? sessions.sessionOf(props && props.actx) : null;
-                  var sid = sess ? sess.sessionId : (props && props.sessionId);
-                  if (sid && skillsRemote) {
-                    skillsRemote.list({ sessionId: sid }, abort.signal).then(function (res) {
-                      if (active && res.ok) {
-                        setSkillsList(res.value.skills || []);
-                      }
-                    }).catch(function () {});
-                  }
-                  return function () { active = false; abort.abort(); };
-                }, [props && props.sessionId]);
-
-                return h(CockpitPanel, {
-                  skills: skillsList,
-                  onInsertSkill: function (name) {
-                    var textarea = document.querySelector('textarea');
-                    if (textarea) {
-                      textarea.focus();
-                      var text = '/' + name + ' ';
-                      var start = textarea.selectionStart;
-                      var end = textarea.selectionEnd;
-                      textarea.setRangeText(text, start, end, 'end');
-                      textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                    }
-                  }
-                });
-              });
-            });
-          } catch (e) {
-            console.warn('[dsh-cockpit] Rightbar tab registration failed:', e);
-          }
-        }
-
-        // 2. Slash Menu Categorization & Drill-down (/cockpit-skill or enhanced slash)
-        if (inputTriggers && skillsRemote) {
-          var cockpitSource = {
-            trigger: '/',
-            name: 'cockpit-skill',
-            order: 1.5, // Intercepts before standard flat skill (order: 2)
-            candidates: function (session, filter) {
-              var query = filter.query;
-              var signal = filter.signal;
-
-              if (sessions && sessions.subagentAddress && sessions.subagentAddress(session.sessionId) !== undefined) {
-                return Promise.resolve([]);
-              }
-
-              return skillsRemote.list({ sessionId: session.sessionId }, signal).then(function (result) {
-                if (!result.ok || signal.aborted) return [];
-                var allSkills = result.value.skills || [];
-                var config = loadCockpitConfig();
-                var trimmed = query.trim().toLowerCase();
-
-                // If user is actively searching keywords, return matched skills with group tags
-                if (trimmed.length > 0) {
-                  return allSkills
-                    .filter(function (s) {
-                      return s.name.toLowerCase().indexOf(trimmed) !== -1 ||
-                             (s.description || '').toLowerCase().indexOf(trimmed) !== -1;
-                    })
-                    .map(function (s) {
-                      var g = matchSkillGroup(s.name, config.groups);
-                      return {
-                        name: s.name,
-                        label: (g.icon || '🏷️') + ' ' + g.name,
-                        description: s.description,
-                        section: g.name
-                      };
-                    });
-                }
-
-                // Top level: Folders for each group with drilldown
-                var groupMap = new Map();
-                for (var i = 0; i < config.groups.length; i++) groupMap.set(config.groups[i].id, []);
-                groupMap.set(FALLBACK_GROUP.id, []);
-
-                for (var j = 0; j < allSkills.length; j++) {
-                  var sk = allSkills[j];
-                  var grp = matchSkillGroup(sk.name, config.groups);
-                  var l = groupMap.get(grp.id) || groupMap.get(FALLBACK_GROUP.id);
-                  l.push(sk);
-                }
-
-                var topItems = [];
-                var sorted = config.groups.slice().sort(function (a, b) { return b.priority - a.priority; });
-
-                for (var k = 0; k < sorted.length; k++) {
-                  var group = sorted[k];
-                  var items = groupMap.get(group.id) || [];
-                  if (items.length === 0) continue;
-
-                  (function (g, itms) {
-                    topItems.push({
-                      name: (g.icon || '📁') + ' ' + g.name,
-                      label: itms.length + ' 个技能 (Tab 展开)',
-                      description: g.description,
-                      section: '⚡ 技能分组导航 (Tab 展开)',
-                      drill: function () {
-                        return itms.map(function (item) {
-                          return {
-                            name: item.name,
-                            label: g.name,
-                            description: item.description
-                          };
-                        });
-                      }
-                    });
-                  })(group, items);
-                }
-
-                var fallbackItems = groupMap.get(FALLBACK_GROUP.id) || [];
-                if (fallbackItems.length > 0) {
-                  topItems.push({
-                    name: (FALLBACK_GROUP.icon || '📦') + ' ' + FALLBACK_GROUP.name,
-                    label: fallbackItems.length + ' 个技能 (Tab 展开)',
-                    description: FALLBACK_GROUP.description,
-                    section: '⚡ 技能分组导航 (Tab 展开)',
-                    drill: function () {
-                      return fallbackItems.map(function (item) {
-                        return {
-                          name: item.name,
-                          label: FALLBACK_GROUP.name,
-                          description: item.description
-                        };
-                      });
-                    }
-                  });
-                }
-
-                return topItems;
-              });
-            },
-            onPick: function (ctx) {
-              var cleanName = ctx.candidate.name.replace(/^[^\w-]+/, '').trim();
-              return { text: '/' + cleanName + ' ' };
-            }
-          };
-
-          ctx.effect(function () {
-            var unregister = inputTriggers.registerSource(cockpitSource);
-            return function () { unregister(); };
-          }, 'dsh-cockpit: slash source');
-        }
-
-        console.log('[dsh-cockpit] Applied successfully.');
+      } catch (error) {
+        console.warn('[dsh-cockpit] config not saved:', error)
       }
-    };
+    }
+
+    // --- 2. Candidate building ---
+
+    /** `{ kind: 'group', id }` / `{ kind: 'root' }` as the opaque pick payload. */
+    function encode(payload) {
+      return JSON.stringify(payload)
+    }
+
+    function decode(value) {
+      if (typeof value !== 'string' || value === '') return undefined
+      try {
+        var parsed = JSON.parse(value)
+        return parsed && typeof parsed.kind === 'string' ? parsed : undefined
+      } catch (error) {
+        return undefined
+      }
+    }
+
+    function byName(a, b) {
+      return a.name < b.name ? -1 : a.name > b.name ? 1 : 0
+    }
+
+    /** Bucket the catalog into the configured groups, dropping empty ones. */
+    function bucketSkills(skills, groups) {
+      var buckets = []
+      var byId = {}
+      var ordered = sortGroups(groups).concat([FALLBACK_GROUP])
+      for (var i = 0; i < ordered.length; i++) {
+        var group = ordered[i]
+        if (byId[group.id]) continue
+        var bucket = { group: group, skills: [] }
+        byId[group.id] = bucket
+        buckets.push(bucket)
+      }
+      for (var j = 0; j < skills.length; j++) {
+        var skill = skills[j]
+        var home = matchSkillGroup(skill.name, groups)
+        var target = byId[home.id] || byId[FALLBACK_GROUP.id]
+        target.skills.push(skill)
+      }
+      for (var k = 0; k < buckets.length; k++) buckets[k].skills.sort(byName)
+      return buckets.filter(function (bucket) { return bucket.skills.length > 0 })
+    }
+
+    function folderRow(group, count) {
+      return {
+        name: group.id + '/',
+        label: group.name,
+        description: (group.description ? group.description + ' · ' : '') + count + ' 个技能 · Tab 进入',
+        icon: 'folder',
+        drill: true,
+        value: encode({ kind: 'group', id: group.id })
+      }
+    }
+
+    function skillRow(skill, section) {
+      return {
+        name: skill.name,
+        description: skill.description,
+        value: encode({ kind: 'skill', name: skill.name }),
+        ...(section === undefined ? {} : { section: section })
+      }
+    }
+
+    function matches(text, needle) {
+      return typeof text === 'string' && text.toLowerCase().indexOf(needle) !== -1
+    }
+
+    /** Rows for one drilled-in group, filtered by the text typed after the slash. */
+    function groupRows(bucket, filter) {
+      var rows = []
+      var section = bucket.group.name
+      for (var i = 0; i < bucket.skills.length; i++) {
+        var skill = bucket.skills[i]
+        if (filter !== '' && !matches(skill.name, filter) && !matches(skill.description, filter)) continue
+        rows.push(skillRow(skill, section))
+      }
+      return rows
+    }
+
+    /**
+     * The rows for one query.
+     *
+     * `<groupId>/<filter>` lists one group; anything else is the root: folders
+     * when nothing is typed, folders plus matching skills when searching.
+     */
+    function buildCandidates(skills, query, groups) {
+      var buckets = bucketSkills(skills, groups)
+      var trimmed = (query || '').trim()
+      var slash = trimmed.indexOf('/')
+      if (slash >= 0) {
+        var groupId = trimmed.slice(0, slash)
+        var filter = trimmed.slice(slash + 1).trim().toLowerCase()
+        for (var i = 0; i < buckets.length; i++) {
+          if (buckets[i].group.id === groupId) return groupRows(buckets[i], filter)
+        }
+      }
+      var needle = trimmed.toLowerCase()
+      if (needle === '') {
+        return buckets.map(function (bucket) { return folderRow(bucket.group, bucket.skills.length) })
+      }
+      // Search across groups: a folder that matches stays reachable, and every
+      // matching skill shows under its own group heading.
+      var rows = []
+      for (var f = 0; f < buckets.length; f++) {
+        var group = buckets[f].group
+        if (matches(group.name, needle) || matches(group.id, needle) || matches(group.description, needle)) {
+          rows.push(folderRow(group, buckets[f].skills.length))
+        }
+      }
+      for (var g = 0; g < buckets.length; g++) {
+        var bucket = buckets[g]
+        for (var s = 0; s < bucket.skills.length; s++) {
+          var skill = bucket.skills[s]
+          if (matches(skill.name, needle) || matches(skill.description, needle)) {
+            rows.push(skillRow(skill, bucket.group.name))
+          }
+        }
+      }
+      return rows
+    }
+
+    /** Breadcrumbs for a drilled listing: the root and the open group. */
+    function buildHeader(query, drilled, groups) {
+      if (!drilled) return undefined
+      var trimmed = (query || '').trim()
+      var slash = trimmed.indexOf('/')
+      if (slash < 0) return undefined
+      var groupId = trimmed.slice(0, slash)
+      var group = undefined
+      var ordered = sortGroups(groups).concat([FALLBACK_GROUP])
+      for (var i = 0; i < ordered.length; i++) {
+        if (ordered[i].id === groupId) group = ordered[i]
+      }
+      if (group === undefined) return undefined
+      return [
+        { label: '技能分类', value: encode({ kind: 'root' }) },
+        { label: group.name, value: encode({ kind: 'group', id: group.id }), current: true }
+      ]
+    }
+
+    // --- 3. Plugin body ---
+
+    /**
+     * The live source roster behind `ctx.inputTriggers`.
+     *
+     * The published contract only faces `registerSource`/`sessionOf`, but the
+     * service keeps every source in one array and hands that same array to each
+     * session controller, so replacing the native flat source means editing it.
+     * Read defensively: when the field is gone we fall back to registering our
+     * own source and accept that the native list stays next to it.
+     */
+    function liveSources(inputTriggers) {
+      var live = inputTriggers === undefined ? undefined : inputTriggers.live
+      if (live && Array.isArray(live.sources)) return live.sources
+      return undefined
+    }
+
+    function findNativeSkillSource(inputTriggers) {
+      var list = liveSources(inputTriggers)
+      if (list === undefined) return undefined
+      for (var i = 0; i < list.length; i++) {
+        var entry = list[i]
+        if (entry && entry.trigger === '/' && entry.name === 'skill') return entry
+      }
+      return undefined
+    }
+
+    return {
+      inject: ['inputTriggers', 'sessions', 'remote', 'remote.skills'],
+      apply: function (ctx) {
+        var skillsRemote = ctx.remote && ctx.remote.skills
+        var sessions = ctx.sessions
+        var inputTriggers = ctx.get('inputTriggers')
+        if (!skillsRemote || !inputTriggers) {
+          console.warn('[dsh-cockpit] required services missing; slash grouping disabled')
+          return
+        }
+
+        var config = loadCockpitConfig()
+
+        function isSubagent(session) {
+          return sessions && typeof sessions.subagentAddress === 'function' &&
+            sessions.subagentAddress(session.sessionId) !== undefined
+        }
+
+        function candidatesFor(session, request) {
+          if (isSubagent(session)) return Promise.resolve([])
+          var signal = request.signal
+          return skillsRemote.list({ sessionId: session.sessionId }, signal).then(function (result) {
+            if (signal && signal.aborted) return []
+            if (!result || !result.ok) {
+              console.warn('[dsh-cockpit] skills/list failed:', result && result.error)
+              return []
+            }
+            var skills = (result.value && result.value.skills) || []
+            return buildCandidates(skills, request.query, config.groups)
+          }, function (error) {
+            console.warn('[dsh-cockpit] skills/list rejected:', error)
+            return []
+          })
+        }
+
+        function headerFor(session, request) {
+          return buildHeader(request.query, request.drilled, config.groups)
+        }
+
+        function pickFor(pick) {
+          var payload = decode(pick.candidate.value)
+          if (payload && payload.kind === 'group') {
+            // Descend: the replacement text is the whole new token, trigger
+            // included, because the pick replaces trigger+query under the caret.
+            return { text: '/' + payload.id + '/', continue: true }
+          }
+          if (payload && payload.kind === 'root') {
+            return { text: '/', continue: true }
+          }
+          return { text: '/' + pick.candidate.name + ' ' }
+        }
+
+        // Preferred path: take the native '/' source over in place. One list,
+        // and whatever else that source provides (lexicon, reference preview)
+        // keeps working. The fields are `readonly` in TypeScript only.
+        var native = config.replaceNative === false
+          ? undefined
+          : findNativeSkillSource(inputTriggers)
+        if (native !== undefined) {
+          try {
+            native.candidates = candidatesFor
+            native.header = headerFor
+            native.onPick = pickFor
+            return
+          } catch (error) {
+            console.warn('[dsh-cockpit] native source not writable, registering a second one:', error)
+          }
+        }
+
+        /** Hide a native source that registers after us (its order is not ours to pick). */
+        function dropNativeSkillSource() {
+          if (config.replaceNative === false) return
+          var list = liveSources(inputTriggers)
+          if (list === undefined) return
+          for (var i = list.length - 1; i >= 0; i--) {
+            if (list[i] && list[i].trigger === '/' && list[i].name === 'skill') list.splice(i, 1)
+          }
+        }
+
+        var source = {
+          trigger: '/',
+          name: 'skill-cockpit',
+          order: 2,
+          candidates: function (session, request) {
+            if (config.replaceNative !== false) dropNativeSkillSource()
+            return candidatesFor(session, request)
+          },
+          header: headerFor,
+          onPick: pickFor
+        }
+
+        ctx.effect(function () {
+          var unregister = inputTriggers.registerSource(source)
+          return function () { unregister() }
+        }, 'dsh-cockpit: grouped slash source')
+      }
+    }
   }
-});
+})
