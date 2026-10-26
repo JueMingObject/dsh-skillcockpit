@@ -1,0 +1,43 @@
+{
+  "name": "@dsh-community/dsh-cockpit",
+  "version": "1.0.0",
+  "description": "Custom skill categorization, drillable slash menu enhancer, and workspace cockpit panel for DeepSeek Harness",
+  "main": "lib/index.js",
+  "type": "module",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client.js"
+  },
+  "scripts": {
+    "build": "node build.cjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JueMingObject/dsh-skillcockpit.git"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "skills",
+    "cockpit",
+    "slash-menu",
+    "gstack"
+  ],
+  "author": "JueMingObject",
+  "license": "MIT",
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-tool",
+        "@deepseek-ai/dsh-client-ui-input-trigger",
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-client-ui-sidebar-right",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ]
+    }
+  }
+}
