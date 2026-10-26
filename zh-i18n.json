@@ -81,5 +81,9 @@
   "spec": { "label": "写成可执行规格", "desc": "五阶段把模糊意图固化成规格与工单" },
   "sync-gbrain": { "label": "同步gbrain", "desc": "让记忆库跟上仓库现状并刷新检索指引" },
   "test-audit": { "label": "测试体检", "desc": "找出低价值、重复的测试及其养活的测试专用代码" },
-  "unfreeze": { "label": "解除冻结", "desc": "放开 /freeze 设的编辑边界" }
+  "unfreeze": { "label": "解除冻结", "desc": "放开 /freeze 设的编辑边界" },
+  "arkuix-flowlog-diagnose-skill": { "label": "ArkUI-X日志诊断", "desc": "按 logcat/os_log 排查白屏、卡顿、启动慢与崩溃" },
+  "arkuix-migration-skeleton": { "label": "ArkUI-X迁移骨架", "desc": "为 Stage 工程生成 Android/iOS 壳与共享 ArkTS 骨架" },
+  "hmos-arkui-navigation-transition": { "label": "导航转场", "desc": "配置 Navigation/NavDestination 的转场动画" },
+  "hmos-arkui-statemgt-migration": { "label": "状态管理V1转V2", "desc": "把 @State/@Link 等 V1 装饰器迁移到 V2" }
 }

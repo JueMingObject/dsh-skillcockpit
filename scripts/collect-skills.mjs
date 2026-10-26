@@ -70,8 +70,6 @@ function frontmatter(text) {
   return fields
 }
 
-const hasCJK = text => /[\u3400-\u9fff]/.test(text ?? '')
-
 const roots = process.argv.length > 2 ? process.argv.slice(2) : DEFAULT_ROOTS
 const catalog = new Map()
 
@@ -110,8 +108,15 @@ for (const name of [...catalog.keys()].sort()) {
   merged[name] = row
 }
 
-// "Pending" means: no hand-written row in zh-i18n.json and nothing Chinese to fall back on.
-const pending = Object.entries(merged).filter(([name, row]) => manual[name] === undefined && !hasCJK(row.en))
+// "Pending" means: no hand-written row in zh-i18n.json and the description reads
+// mostly English. Counting characters rather than asking "is there any CJK at
+// all" matters: an English sentence that happens to name a Chinese keyword
+// (`Use when diagnosing 白屏, 卡顿 ...`) is still unreadable in a Chinese menu.
+const cjkCount = text => ((text ?? '').match(/[\u3400-\u9fff]/g) ?? []).length
+const latinCount = text => ((text ?? '').match(/[A-Za-z]/g) ?? []).length
+const pending = Object.entries(merged).filter(
+  ([name, row]) => manual[name] === undefined && latinCount(row.en) > cjkCount(row.en)
+)
 writeFileSync(OUT, `${JSON.stringify(merged, null, 2)}\n`, 'utf8')
 
 process.stdout.write(

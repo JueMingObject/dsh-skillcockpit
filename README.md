@@ -18,7 +18,7 @@
 3. **🈶 中文介绍层**
    - 技能 frontmatter 大多是英文：菜单行显示**中文名**，原始英文标识保留在右侧（`无头浏览器 browse`），选中后插入的仍是 `browse`，不会改变实际调用的技能。
    - 支持中文搜索：打 `/浏览器` 就能找到 `browse`。
-   - 自带 154 个技能里 83 条人工中文化；剩下的本来就有中文简介，直接沿用。可用 `localStorage['dsh.cockpit.zh']` 覆盖任意一条。
+   - 自带 154 个技能里 87 条人工中文化；剩下的本来就有中文简介，直接沿用。可用 `localStorage['dsh.cockpit.zh']` 覆盖任意一条。
 4. **📊 驾驶舱面板 (Cockpit Panel)**
    - 挂载于 DSH 侧边栏/右侧栏，分类浏览所有可用技能与 MCP 工具，支持一键点击填入。
    - 实时监控后台命令/编译进程，一览无余。
@@ -95,10 +95,10 @@ Get-Process "DeepSeek Harness" | Select-Object Id, StartTime
       "patterns": ["hmos-*", "arkui*", "arkuix*"]
     },
     {
-      "id": "media",
-      "name": "🎬 漫剧与视听创作",
-      "priority": 80,
-      "patterns": ["manju-*", "minimax-*", "krea*", "fujimoto-*", "motion-canvas", "remotion-*"]
+      "id": "film",
+      "name": "🎬 影视与漫剧",
+      "priority": 85,
+      "patterns": ["film-*", "manju-*", "minimax-*", "krea*", "fujimoto-*", "storyboard-*", "shot-*", "scene-*"]
     }
   ]
 }

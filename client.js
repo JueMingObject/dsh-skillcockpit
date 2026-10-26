@@ -30,7 +30,8 @@ window.__ModuleLoader__.load({
           'retro', 'spec', 'health', 'cso', 'codex', 'benchmark*', 'connect-chrome',
           'context-*', 'design-*', 'document-*', 'ios-*', 'land-and-deploy', 'landing-report',
           'make-pdf', 'office-hours', 'open-gstack-browser', 'pair-agent', 'plan-*', 'scrape',
-          'setup-*', 'skillify', 'sync-gbrain'
+          'setup-*', 'skillify', 'sync-gbrain', 'captain', 'claude', 'deslop-shared-libs',
+          'eval-plan', 'hackernews-frontpage', 'memory-curation', 'reuse-gate', 'test-audit'
         ]
       },
       {
@@ -42,15 +43,18 @@ window.__ModuleLoader__.load({
         patterns: ['hmos-*', 'arkui*', 'arkuix*']
       },
       {
-        id: 'media',
-        name: '🎬 漫剧与视听创作',
-        priority: 80,
+        id: 'film',
+        name: '🎬 影视与漫剧',
+        priority: 85,
         icon: '🎬',
-        description: '漫剧工坊、Minimax H3 导演工作流、Krea2、漫画与音视频制作',
+        description: '影视全流程、漫剧工坊、分镜预演、图像与音视频生成',
         patterns: [
-          'manju-*', 'minimax-*', 'krea*', 'fujimoto-*', 'motion-canvas', 'remotion-*',
-          'infinitetalk', 'audio-production*', 'tts-*', 'cinematic-*', 'seedance-*',
-          'storyboard-*', 'video-*', 'asset-*', 'gpt-image*'
+          'film-*', 'ai-film*', 'manju-*', 'minimax-*', 'krea*', 'fujimoto-*',
+          'asset-*', 'scene-*', 'shot-*', 'story-*', 'storyboard-*', 'character-*',
+          'world-*', 'creative-review', 'director-review', 'foundation-interview',
+          'book-binding-*', 'local-revision', 'material-sync', 'music-video',
+          'motion-canvas', 'remotion-*', 'video-*', 'gpt-image*', 'cinematic-*',
+          'seedance-*', 'tts-*', 'audio-production*', 'infinitetalk'
         ]
       },
       {
@@ -87,7 +91,7 @@ window.__ModuleLoader__.load({
           'product-*', 'prd-*', 'situation-design', 'user-model*', 'user-persona',
           'user-story*', 'destination-first*', 'jobs-to-be-done', 'lean-ux*',
           'opportunity-*', 'prioritization*', 'problem-*', 'roadmap-*', 'epic-*',
-          'discovery-*', 'proto-persona'
+          'discovery-*', 'proto-persona', 'ai-company', 'budget-calculus'
         ]
       },
       {
@@ -111,7 +115,8 @@ window.__ModuleLoader__.load({
         description: 'Office 格式处理、PDF、图表生成、文档解析与基础组件',
         patterns: [
           'office-*', 'make-pdf', 'antinet-*', 'archify', 'diagram',
-          'icon-generator', 'baoyu-*', 'obsidian-*', 'accessibility', 'flue'
+          'icon-generator', 'baoyu-*', 'obsidian-*', 'accessibility', 'flue',
+          'find-skills', 'alpha', 'beta'
         ]
       }
     ]
@@ -136,6 +141,8 @@ window.__ModuleLoader__.load({
     var SKILL_ZH = {
       "ai-film-router": {"l":"影视流程路由","d":"把一个影视项目分派到唯一正确的制作阶段"},
       "alpha": {"l":"测试夹具","d":"带模式表与强制读取的固定测试技能"},
+      "arkuix-flowlog-diagnose-skill": {"l":"ArkUI-X日志诊断","d":"按 logcat/os_log 排查白屏、卡顿、启动慢与崩溃"},
+      "arkuix-migration-skeleton": {"l":"ArkUI-X迁移骨架","d":"为 Stage 工程生成 Android/iOS 壳与共享 ArkTS 骨架"},
       "autoplan": {"l":"自动评审流水线","d":"顺序跑 CEO/设计/工程/DX 四份评审并按决策原则自动裁决"},
       "benchmark": {"l":"性能基准","d":"用浏览守护进程做性能回归检测"},
       "benchmark-models": {"l":"模型横评","d":"对 gstack 技能做跨模型基准对比"},
@@ -181,6 +188,8 @@ window.__ModuleLoader__.load({
       "hmos-ability-insight-intent-generator": {"l":"意图装饰器","d":"自动选装饰器生成 OpenHarmony intent 代码"},
       "hmos-arkts-knowledge-retriever": {"l":"ArkTS知识检索","d":"按仓库文档检索 ArkTS 语法与 API 依据"},
       "hmos-arkui-develop-skill": {"l":"ArkUI开发必读","d":"写第一个 .ets 前的致命坑清单与 API 速查"},
+      "hmos-arkui-navigation-transition": {"l":"导航转场","d":"配置 Navigation/NavDestination 的转场动画"},
+      "hmos-arkui-statemgt-migration": {"l":"状态管理V1转V2","d":"把 @State/@Link 等 V1 装饰器迁移到 V2"},
       "hmos-one-sdk-skill": {"l":"Kit接口速查","d":"25 个 Kit 的签名、错误码与权限速查"},
       "investigate": {"l":"系统排查","d":"四阶段：调查、分析、假设、实现"},
       "ios-clean": {"l":"清理iOS调试桥","d":"移除 DebugBridge SPM 包与 DEBUG 接线"},
