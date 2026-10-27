@@ -1,7 +1,9 @@
 // DSH Skill Cockpit — client bundle.
 //
-// Turns the flat `/` skill list into grouped folders with Tab drill-down, and
-// (下一步) adds a cockpit tab to the right sidebar.
+// Two faces, both registered from this one file:
+//   1. the `/` slash menu, rewritten in place into grouped, drillable folders;
+//   2. a cockpit tab in the right sidebar that lists every skill by group and
+//      copies the command on click.
 //
 // Contract notes (verified against the harness sources, do not guess):
 //   * `InputTriggerCandidate.drill` is a BOOLEAN flag, not a callback.
@@ -16,6 +18,17 @@
 window.__ModuleLoader__.load({
   id: '@local/dsh-cockpit',
   factory: function (require) {
+    // The host's module factory resolves package specifiers; the sidebar body is
+    // React, so this is the one import the bundle needs. Resolved defensively:
+    // without it the cockpit panel cannot render, but the slash menu still can.
+    var React
+    try {
+      React = require('react')
+    } catch (error) {
+      React = undefined
+      console.warn('[dsh-cockpit] react is unavailable; the cockpit panel stays off')
+    }
+
     // --- 1. Groups and the wildcard matcher ---
     var DEFAULT_GROUPS = [
       {
@@ -485,6 +498,310 @@ window.__ModuleLoader__.load({
       ]
     }
 
+    // --- 4. Right-sidebar cockpit panel ---
+    //
+    // A tab type is two registrations: the static `SidebarRightTabDefinition`
+    // (id/kind/title/guide) into `sidebarRightTabs`, and the body under the very
+    // same `id` into the keyed seat `sidebar.right.pane.tab`
+    // (`ui-sidebar-right/src/client/contract/slots.ts:40-95`). The body gets the
+    // session id through its `inject` props factory — the same shape
+    // `ui-sidebar-browser/src/client/index.ts:39-42` uses.
+
+    var COCKPIT_TAB_ID = '@local/dsh-cockpit:panel'
+    var COCKPIT_TAB_KIND = 'skill-cockpit'
+    var SKILLS_REMOTE
+    var SESSIONS
+
+    var PANEL_CSS = [
+      '.dsh-cockpit-panel{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;font-size:12.5px;color:inherit}',
+      '.dsh-cockpit-head{display:flex;align-items:baseline;gap:8px;padding:10px 12px 6px}',
+      '.dsh-cockpit-title{font-weight:600;font-size:13px}',
+      '.dsh-cockpit-sub{opacity:.55;font-size:11px;font-variant-numeric:tabular-nums}',
+      '.dsh-cockpit-action{margin-left:auto;border:0;background:transparent;color:inherit;opacity:.55;cursor:pointer;font:inherit;font-size:11px;padding:2px 5px;border-radius:4px}',
+      '.dsh-cockpit-action:hover{opacity:1;background:rgba(127,127,127,.16)}',
+      '.dsh-cockpit-search{margin:0 12px 8px;padding:5px 8px;border:1px solid rgba(127,127,127,.3);border-radius:6px;background:rgba(127,127,127,.08);color:inherit;font:inherit;font-size:12px;outline:none}',
+      '.dsh-cockpit-search:focus{border-color:rgba(127,127,127,.55)}',
+      '.dsh-cockpit-list{flex:1;min-height:0;overflow:auto;padding:0 8px 8px}',
+      '.dsh-cockpit-group-head{display:flex;align-items:center;gap:6px;width:100%;border:0;background:transparent;color:inherit;cursor:pointer;padding:5px 4px;border-radius:5px;font:inherit;text-align:left}',
+      '.dsh-cockpit-group-head:hover{background:rgba(127,127,127,.12)}',
+      '.dsh-cockpit-caret{width:10px;opacity:.5;font-size:9px}',
+      '.dsh-cockpit-group-name{font-weight:600;font-size:12px}',
+      '.dsh-cockpit-count{margin-left:auto;opacity:.45;font-size:11px;font-variant-numeric:tabular-nums}',
+      '.dsh-cockpit-row{display:flex;flex-direction:column;gap:1px;width:100%;border:0;background:transparent;color:inherit;cursor:pointer;padding:4px 6px 4px 20px;border-radius:5px;font:inherit;text-align:left}',
+      '.dsh-cockpit-row:hover{background:rgba(127,127,127,.14)}',
+      '.dsh-cockpit-row-main{display:flex;align-items:baseline;gap:6px;min-width:0;width:100%}',
+      '.dsh-cockpit-row-label{font-size:12px;white-space:nowrap}',
+      '.dsh-cockpit-row-name{opacity:.45;font-size:10.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.dsh-cockpit-row-desc{opacity:.55;font-size:11px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}',
+      '.dsh-cockpit-empty{padding:18px 12px;opacity:.55;text-align:center;font-size:12px}',
+      '.dsh-cockpit-error{padding:14px 12px;font-size:12px;color:#e0a79b}',
+      '.dsh-cockpit-foot{padding:6px 12px 10px;opacity:.45;font-size:11px;border-top:1px solid rgba(127,127,127,.18)}',
+      '.dsh-cockpit-toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(38,38,38,.94);color:#fff;padding:4px 10px;border-radius:999px;font-size:11px;pointer-events:none;white-space:nowrap}'
+    ].join('')
+
+    /**
+     * What the panel lists for one query, in group order.
+     *
+     * Kept separate from the component so the listing rules are testable without
+     * a DOM: a group with nothing matching is dropped, and the row carries the
+     * Chinese label next to the identifier it still copies.
+     */
+    function panelModel(skills, groups, query) {
+      var buckets = bucketSkills(skills, groups)
+      var needle = (query || '').trim().toLowerCase()
+      var model = []
+      for (var i = 0; i < buckets.length; i++) {
+        var bucket = buckets[i]
+        var rows = []
+        for (var s = 0; s < bucket.skills.length; s++) {
+          var skill = bucket.skills[s]
+          if (needle !== '' && !skillMatches(skill, needle)) continue
+          var zh = zhOf(skill.name)
+          rows.push({
+            name: skill.name,
+            label: zh !== undefined && zh.l !== undefined ? zh.l : undefined,
+            desc: zh !== undefined && zh.d !== undefined ? zh.d : (skill.description || '')
+          })
+        }
+        if (needle !== '' && rows.length === 0) continue
+        model.push({ group: bucket.group, rows: rows, total: bucket.skills.length })
+      }
+      return model
+    }
+
+    /** Copy `/name ` — the clipboard API, with the textarea trick as the fallback. */
+    function copyCommand(name, done) {
+      var text = '/' + name + ' '
+      var fallback = function () {
+        try {
+          var area = document.createElement('textarea')
+          area.value = text
+          area.setAttribute('readonly', '')
+          area.style.position = 'fixed'
+          area.style.top = '-1000px'
+          area.style.opacity = '0'
+          document.body.appendChild(area)
+          area.select()
+          document.execCommand('copy')
+          document.body.removeChild(area)
+        } catch (error) {
+          console.warn('[dsh-cockpit] copy failed:', error)
+        }
+        done(text)
+      }
+      if (typeof navigator !== 'undefined' && navigator !== null && navigator.clipboard &&
+        typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(text).then(function () { done(text) }, fallback)
+        return
+      }
+      fallback()
+    }
+
+    function CockpitPanel(props) {
+      var sessionId = props === undefined ? undefined : props.sessionId
+      var groups = props !== undefined && props.groups !== undefined ? props.groups : DEFAULT_GROUPS
+
+      var loadingPair = React.useState(true)
+      var skillsPair = React.useState([])
+      var errorPair = React.useState('')
+      var queryPair = React.useState('')
+      var collapsedPair = React.useState({})
+      var copiedPair = React.useState('')
+      var tickPair = React.useState(0)
+
+      var loading = loadingPair[0]
+      var skills = skillsPair[0]
+      var error = errorPair[0]
+      var query = queryPair[0]
+      var collapsed = collapsedPair[0]
+      var copied = copiedPair[0]
+      var tick = tickPair[0]
+
+      React.useEffect(function () {
+        if (SKILLS_REMOTE === undefined) {
+          errorPair[1]('技能服务不可用')
+          loadingPair[1](false)
+          return undefined
+        }
+        var cancelled = false
+        var controller = typeof AbortController === 'function' ? new AbortController() : undefined
+        loadingPair[1](true)
+        var request = sessionId === undefined || sessionId === null || sessionId === ''
+          ? {}
+          : { sessionId: sessionId }
+        SKILLS_REMOTE.list(request, controller === undefined ? undefined : controller.signal).then(function (result) {
+          if (cancelled) return
+          loadingPair[1](false)
+          if (!result || !result.ok) {
+            errorPair[1]((result && result.error) || '读取技能失败')
+            return
+          }
+          skillsPair[1]((result.value && result.value.skills) || [])
+          errorPair[1]('')
+        }, function (failure) {
+          if (cancelled) return
+          loadingPair[1](false)
+          errorPair[1](String((failure && failure.message) || failure))
+        })
+        return function () {
+          cancelled = true
+          if (controller !== undefined) controller.abort()
+        }
+      }, [sessionId, tick])
+
+      React.useEffect(function () {
+        if (copied === '') return undefined
+        var timer = setTimeout(function () { copiedPair[1]('') }, 1200)
+        return function () { clearTimeout(timer) }
+      }, [copied])
+
+      var model = panelModel(skills, groups, query)
+      var totalSkills = skills.length
+      var groupCount = model.length
+
+      var head = React.createElement('div', { className: 'dsh-cockpit-head', key: 'head' },
+        React.createElement('span', { className: 'dsh-cockpit-title' }, '驾驶舱'),
+        React.createElement('span', { className: 'dsh-cockpit-sub' },
+          loading ? '读取中…' : totalSkills + ' 个技能 · ' + groupCount + ' 组'),
+        React.createElement('button', {
+          className: 'dsh-cockpit-action',
+          type: 'button',
+          title: '重新读取技能列表',
+          onClick: function () { tickPair[1](tick + 1) }
+        }, '刷新')
+      )
+
+      var search = React.createElement('input', {
+        className: 'dsh-cockpit-search',
+        key: 'search',
+        type: 'search',
+        placeholder: '搜技能、中文名或简介',
+        value: query,
+        onChange: function (event) { queryPair[1](event.target.value) }
+      })
+
+      var children = []
+      if (error !== '') {
+        children.push(React.createElement('div', { className: 'dsh-cockpit-error', key: 'error' }, error))
+      } else if (loading && totalSkills === 0) {
+        children.push(React.createElement('div', { className: 'dsh-cockpit-empty', key: 'loading' }, '正在读取技能…'))
+      } else if (model.length === 0) {
+        children.push(React.createElement('div', { className: 'dsh-cockpit-empty', key: 'empty' },
+          query === '' ? '没有可用的技能' : '没找到：' + query))
+      }
+      for (var g = 0; g < model.length; g++) {
+        var entry = model[g]
+        var open = collapsed[entry.group.id] !== true
+        var rows = []
+        if (open) {
+          for (var r = 0; r < entry.rows.length; r++) {
+            rows.push(rowElement(entry.rows[r], copied, copyCommand, copiedPair[1]))
+          }
+        }
+        children.push(React.createElement('div', { className: 'dsh-cockpit-group', key: 'g:' + entry.group.id },
+          React.createElement('button', {
+            className: 'dsh-cockpit-group-head',
+            type: 'button',
+            onClick: function (id, wasOpen) {
+              return function () {
+                var next = {}
+                for (var key in collapsed) next[key] = collapsed[key]
+                next[id] = wasOpen
+                collapsedPair[1](next)
+              }
+            }(entry.group.id, open)
+          },
+            React.createElement('span', { className: 'dsh-cockpit-caret' }, open ? '▾' : '▸'),
+            React.createElement('span', { className: 'dsh-cockpit-group-name' }, entry.group.name),
+            React.createElement('span', { className: 'dsh-cockpit-count' },
+              entry.rows.length === entry.total ? String(entry.total) : entry.rows.length + '/' + entry.total)
+          ),
+          rows
+        ))
+      }
+
+      var foot = React.createElement('div', { className: 'dsh-cockpit-foot', key: 'foot' }, '点一下复制斜杠命令，粘到输入框即可')
+      var toast = copied === ''
+        ? null
+        : React.createElement('div', { className: 'dsh-cockpit-toast', key: 'toast' }, '已复制 ' + copied)
+
+      return React.createElement('div', { className: 'dsh-cockpit-panel' },
+        head, search, React.createElement('div', { className: 'dsh-cockpit-list' }, children), foot, toast)
+    }
+
+    function rowElement(row, copied, copy, setCopied) {
+      var label = row.label === undefined ? row.name : row.label
+      return React.createElement('button', {
+        className: 'dsh-cockpit-row',
+        type: 'button',
+        key: 's:' + row.name,
+        title: row.desc + '\n/' + row.name,
+        onClick: function () {
+          copy(row.name, function () { setCopied('/' + row.name + ' ') })
+        }
+      },
+        React.createElement('span', { className: 'dsh-cockpit-row-main' },
+          React.createElement('span', { className: 'dsh-cockpit-row-label' }, label),
+          row.label === undefined ? null : React.createElement('span', { className: 'dsh-cockpit-row-name' }, row.name)
+        ),
+        row.desc === '' ? null : React.createElement('span', { className: 'dsh-cockpit-row-desc' }, row.desc)
+      )
+    }
+
+    /** Inject the panel stylesheet once; the tab body renders many times over. */
+    function installPanelStyles() {
+      if (typeof document === 'undefined' || document.head === undefined) return
+      var id = 'dsh-cockpit-styles'
+      if (document.getElementById(id) !== null) return
+      var style = document.createElement('style')
+      style.id = id
+      style.textContent = PANEL_CSS
+      document.head.appendChild(style)
+    }
+
+    /**
+     * Register the cockpit tab type and its body.
+     *
+     * Declared through `ctx.inject` rather than the module `inject` list so a
+     * build without the sidebar package still gets the grouped slash menu —
+     * losing a sidebar is not a reason to lose the menu.
+     */
+    function registerPanel(ctx, groups) {
+      if (React === undefined) return
+      ctx.inject(['sidebarRightTabs', 'slots'], function (owner) {
+        var tabs = owner.get('sidebarRightTabs')
+        if (tabs === undefined) return
+        // `owner.slots` is how `ui-sidebar-browser` reaches the seat; `get` is
+        // the same service without relying on the property accessor.
+        var slots = owner.slots !== undefined && owner.slots !== null ? owner.slots : owner.get('slots')
+        owner.effect(function () {
+          return tabs.register({
+            id: COCKPIT_TAB_ID,
+            kind: COCKPIT_TAB_KIND,
+            priority: 'extension',
+            title: function () { return '驾驶舱' },
+            guide: [{
+              id: 'open',
+              order: 60,
+              title: function () { return '技能驾驶舱' },
+              description: function () { return '按分组浏览全部技能，点一下复制斜杠命令' }
+            }]
+          })
+        }, 'dsh-cockpit: sidebar tab type')
+        if (slots === undefined) {
+          console.warn('[dsh-cockpit] slots service missing; the cockpit tab has no body')
+          return
+        }
+        owner.effect(function () {
+          return slots.register({
+            name: 'sidebar.right.pane.tab',
+            key: COCKPIT_TAB_ID,
+            inject: function (sessionId) { return { sessionId: sessionId, groups: groups } }
+          }, CockpitPanel)
+        }, 'dsh-cockpit: sidebar tab body')
+      })
+    }
+
     // --- 3. Plugin body ---
 
     /**
@@ -517,14 +834,21 @@ window.__ModuleLoader__.load({
       apply: function (ctx) {
         var skillsRemote = ctx.remote && ctx.remote.skills
         var sessions = ctx.sessions
-        var inputTriggers = ctx.get('inputTriggers')
-        if (!skillsRemote || !inputTriggers) {
-          console.warn('[dsh-cockpit] required services missing; slash grouping disabled')
-          return
-        }
-
         var config = loadCockpitConfig()
         ZH = mergeZh(SKILL_ZH, readZhOverrides())
+        SKILLS_REMOTE = skillsRemote
+        SESSIONS = sessions
+
+        // The panel is independent of the slash menu: register it first, so a
+        // build without the input-trigger package still gets the sidebar.
+        installPanelStyles()
+        registerPanel(ctx, config.groups)
+
+        var inputTriggers = ctx.get('inputTriggers')
+        if (!skillsRemote || !inputTriggers) {
+          console.warn('[dsh-cockpit] input trigger unavailable; slash grouping disabled')
+          return
+        }
 
         function isSubagent(session) {
           return sessions && typeof sessions.subagentAddress === 'function' &&

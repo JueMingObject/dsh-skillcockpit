@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-cockpit",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Custom skill categorization, drillable slash menu enhancer, and workspace cockpit panel for DeepSeek Harness",
   "private": true,
   "type": "module",

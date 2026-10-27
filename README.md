@@ -20,8 +20,11 @@
    - 支持中文搜索：打 `/浏览器` 就能找到 `browse`。
    - 自带 154 个技能里 87 条人工中文化；剩下的本来就有中文简介，直接沿用。可用 `localStorage['dsh.cockpit.zh']` 覆盖任意一条。
 4. **📊 驾驶舱面板 (Cockpit Panel)**
-   - 挂载于 DSH 侧边栏/右侧栏，分类浏览所有可用技能与 MCP 工具，支持一键点击填入。
-   - 实时监控后台命令/编译进程，一览无余。
+   - 注册为右侧栏的一个 Tab（标题 `驾驶舱`），在右侧栏的引导页里点「技能驾驶舱」就能打开。
+   - 顶上是技能总数与分组数，中间一行搜索框，下面按分组折叠列出全部技能；行内是「中文名 + 英文标识符 + 简介」。
+   - **点一行就复制 `/技能名 `**，粘到输入框即可，不用记英文名；复制成功有轻提示。
+   - 用的是同一个技能源（`/` 菜单那份），所以**分组与中文层在菜单和面板里永远一致**。
+   - 还没做的（别按已实现理解）：MCP 工具列表、后台进程监控、产出素材卡片 —— 这些是下一版。
 
 ---
 
@@ -129,7 +132,7 @@ node scripts/collect-skills.mjs   # 装了新技能后重新采集
 # 在 zh-i18n.json 里补中文（缺的会自己列出来）
 node scripts/embed-i18n.mjs       # 嵌入 client.js，重启 DSH 生效
 node scripts/embed-i18n.mjs --check   # 检查嵌入块是否过期（CI 用）
-node --test tests/client.test.mjs     # 15 条协议断言
+node --test tests/client.test.mjs     # 21 条协议断言
 ```
 
 几个刻意定下的规则：
@@ -138,6 +141,26 @@ node --test tests/client.test.mjs     # 15 条协议断言
 - **缺翻译时回退原文。** 没有中文条目的技能照常显示自己的英文简介，不会变成空白。
 - **中文键也参与搜索。** 匹配范围是 `name` / 原简介 / 中文名 / 中文简介四者。
 - **用户覆盖层**：`localStorage['dsh.cockpit.zh'] = { "browse": { "label": "我的浏览器", "desc": "..." } }`，也接受 `{ label, desc }` 这种更好读的写法；每行覆盖内置值。
+
+## 📊 驾驶舱面板
+
+面板不是另写一套逻辑，而是**复用 `/` 菜单那套分组与中文层**：同一个 `bucketSkills` / `skillMatches` / `SKILL_ZH`，所以菜单里看到的组、名字、顺序，面板里一模一样。
+
+打开方式：右侧栏 → 引导页里的「技能驾驶舱」（类型注册到 `sidebarRightTabs`，正文注册到 keyed slot `sidebar.right.pane.tab`，两者用同一个 `id` 派发）。
+
+面板里能做的事：
+
+- 看总数与分组数（`154 个技能 · 6 组`），右上角 `刷新` 重新拉取技能列表
+- 搜索框：中英文都行，命中的分组自动展开、空分组自动隐藏
+- 折叠/展开分组；分组标题右侧显示 `命中数/总数`
+- 点任意一行 → 复制 `/技能名 `（剪贴板 API 不可用时回退 textarea 方案），底部弹「已复制」
+
+协议要点（改这段代码前先看，不要靠猜）：
+
+- `SidebarRightTabDefinition.priority` 是枚举 `extension | builtin | fallback`，**不是数字**
+- 正文注册的 `key` 必须等于定义的 `id`，否则该 Tab 显示「没有视图能打开这个」
+- 面板的正文组件通过 `inject(sessionId) => props` 拿到会话；React 从 `require('react')` 取，这是本 bundle 唯一的依赖
+- 面板注册走 `ctx.inject(['sidebarRightTabs','slots'], …)` 而不是模块级 `inject` 列表 —— 没有侧边栏的构建里，斜杠菜单照样能用
 
 ---
 

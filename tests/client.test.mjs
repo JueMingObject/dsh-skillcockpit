@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import test from 'node:test'
 import vm from 'node:vm'
+import { byClass, createPanelRenderer, textOf } from './panel.helper.mjs'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const bundle = readFileSync(join(root, 'client.js'), 'utf8')
@@ -47,6 +48,7 @@ const CATALOG = [
  */
 function mount(options = {}) {
   let plugin
+  const copied = []
   const context = {
     window: {
       __ModuleLoader__: {
@@ -61,10 +63,13 @@ function mount(options = {}) {
       getItem(key) { return this.store[key] ?? null },
       setItem(key, value) { this.store[key] = value }
     },
+    navigator: { clipboard: { writeText: async text => { copied.push(text) } } },
     console: { warn() {}, log() {}, error() {} },
     JSON,
     Promise,
-    AbortController
+    AbortController,
+    setTimeout,
+    clearTimeout
   }
   vm.runInNewContext(bundle, context, { filename: 'client.js' })
   assert.ok(plugin, 'bundle must call __ModuleLoader__.load')
@@ -86,13 +91,52 @@ function mount(options = {}) {
   }
   if (options.withNative !== false) live.push(nativeSource)
   const disposers = []
+  const panel = { definition: undefined, component: undefined, inject: undefined, slotName: undefined, key: undefined }
   const ctx = {
-    remote: { skills: { list: async () => ({ ok: true, value: { skills: CATALOG } }) } },
+    remote: {
+      skills: {
+        list: async () => (options.listFails === true
+          ? { ok: false, error: '技能服务不可用' }
+          : { ok: true, value: { skills: CATALOG } })
+      }
+    },
     sessions: { subagentAddress: () => (options.subagent === true ? 'agent/s1/sub' : undefined) },
-    get: name => (name === 'inputTriggers' ? inputTriggers : undefined),
-    effect: (fn) => { disposers.push(fn()) }
+    get: name => (name === 'inputTriggers' && options.withInputTriggers !== false ? inputTriggers : undefined),
+    effect: (fn) => { disposers.push(fn()) },
+    inject: (services, callback) => {
+      const owner = {
+        get: name => (name === 'sidebarRightTabs'
+          ? { register: definition => { panel.definition = definition; return () => { panel.definition = undefined } } }
+          : undefined),
+        slots: {
+          register: (spec, component) => {
+            panel.slotName = spec.name
+            panel.key = spec.key
+            panel.inject = spec.inject
+            panel.component = component
+            return () => { panel.component = undefined }
+          }
+        },
+        effect: (fn) => { disposers.push(fn()) }
+      }
+      callback(owner)
+    }
   }
-  const built = plugin.factory(() => { throw new Error('bundle must not require modules') })
+  // The sidebar body is React; every other specifier must stay unresolved, so a
+  // bundle that quietly reached for a package the host does not inject fails here.
+  const hookRuntime = { current: undefined }
+  const react = {
+    createElement: (type, props, ...children) => ({
+      type,
+      props: { ...(props ?? {}), children: children.flat(Infinity).filter(child => child !== null && child !== undefined && child !== false) }
+    }),
+    useState: (...args) => hookRuntime.current.useState(...args),
+    useEffect: (...args) => hookRuntime.current.useEffect(...args)
+  }
+  const built = plugin.factory(specifier => {
+    if (specifier === 'react') return react
+    throw new Error(`unexpected require: ${specifier}`)
+  })
   built.apply(ctx)
   assert.ok(registered.length <= 1, 'never registers more than one source')
   return {
@@ -100,6 +144,9 @@ function mount(options = {}) {
     registered,
     live,
     nativeSource,
+    panel,
+    hookRuntime,
+    copied,
     dispose: () => disposers.forEach(fn => fn())
   }
 }
@@ -269,3 +316,85 @@ test('a stored translation overrides the built-in one', async () => {
   assert.equal(qa.label, '质检')
 })
 
+
+// --- the right-sidebar cockpit panel ---------------------------------------
+//
+// A tab type is two registrations under one id: the static definition into
+// `sidebarRightTabs` and the body into the keyed `sidebar.right.pane.tab` seat
+// (`ui-sidebar-right/src/client/contract/slots.ts:40-95`).
+
+test('the cockpit tab type and its body register under one id', () => {
+  const { panel } = mount()
+  assert.equal(panel.slotName, 'sidebar.right.pane.tab')
+  assert.equal(panel.definition.id, panel.key, 'the body dispatch key is the definition id')
+  assert.equal(panel.definition.kind, 'skill-cockpit')
+  assert.equal(panel.definition.priority, 'extension')
+  assert.equal(panel.definition.title('sidebar://skill-cockpit'), '驾驶舱')
+  assert.equal(panel.definition.guide[0].title(), '技能驾驶舱')
+  assert.equal(panel.inject('s1').sessionId, 's1', 'the body learns its session from inject')
+})
+
+test('the panel lists every skill under its group', async () => {
+  const mounted = mount()
+  const view = createPanelRenderer(mounted, mounted.panel.inject('s1'))
+  view.render()
+  await view.settle()
+  const tree = view.render()
+
+  assert.equal(byClass(tree, 'dsh-cockpit-row').length, CATALOG.length)
+  const heads = byClass(tree, 'dsh-cockpit-group-name').map(textOf)
+  assert.deepEqual(heads, ['⚡ gstack 工作流', '📱 鸿蒙与 ArkUI', '🎬 影视与漫剧', '✍️ 编剧与文学',
+    '💻 代码手艺与审查', '📊 产品策划与架构', '📢 增长运营与自媒体', '🛠️ 通用工具与办公', '📦 其他实用技能'])
+  assert.match(textOf(view.render()), /11 个技能 · 9 组/)
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('typing in the panel filters rows and keeps the Chinese label', async () => {
+  const mounted = mount()
+  const view = createPanelRenderer(mounted, mounted.panel.inject('s1'))
+  view.render()
+  await view.settle()
+  const [search] = byClass(view.render(), 'dsh-cockpit-search')
+  search.props.onChange({ target: { value: '浏览器' } })
+  const tree = view.render()
+
+  const rows = byClass(tree, 'dsh-cockpit-row')
+  assert.equal(rows.length, 1)
+  assert.equal(textOf(byClass(rows[0], 'dsh-cockpit-row-label')[0]), '无头浏览器')
+  assert.equal(textOf(byClass(rows[0], 'dsh-cockpit-row-name')[0]), 'browse')
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('clicking a panel row copies the slash command, not the label', async () => {
+  const mounted = mount()
+  const view = createPanelRenderer(mounted, mounted.panel.inject('s1'))
+  view.render()
+  await view.settle()
+  const rows = byClass(view.render(), 'dsh-cockpit-row')
+  const browse = rows.find(row => textOf(byClass(row, 'dsh-cockpit-row-name')[0]) === 'browse')
+  browse.props.onClick()
+  await view.settle()
+
+  assert.deepEqual(mounted.copied, ['/browse '])
+  assert.match(textOf(view.render()), /已复制 \/browse/)
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('a failed skill request shows the error instead of an empty list', async () => {
+  const mounted = mount({ listFails: true })
+  const view = createPanelRenderer(mounted, mounted.panel.inject('s1'))
+  view.render()
+  await view.settle()
+  const tree = view.render()
+
+  assert.equal(byClass(tree, 'dsh-cockpit-row').length, 0)
+  assert.match(textOf(byClass(tree, 'dsh-cockpit-error')[0]), /技能服务不可用/)
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('the panel still registers when the slash menu cannot', () => {
+  const mounted = mount({ withInputTriggers: false })
+  assert.equal(mounted.registered.length, 0, 'no slash source without the input-trigger service')
+  assert.ok(mounted.panel.definition, 'the sidebar panel is independent of the slash menu')
+  assert.ok(mounted.panel.component)
+})
