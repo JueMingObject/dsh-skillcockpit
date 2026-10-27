@@ -666,10 +666,22 @@ window.__ModuleLoader__.load({
         if (target === undefined || target === null) return undefined
         return {
           getSnapshot: function () {
-            var snapshot = target.getSnapshot()
-            return snapshot === undefined || snapshot === null ? EMPTY_TRAJECTORY : snapshot
+            try {
+              var snapshot = target.getSnapshot()
+              return snapshot === undefined || snapshot === null ? EMPTY_TRAJECTORY : snapshot
+            } catch (error) {
+              console.warn('[dsh-cockpit] the trajectory snapshot is unavailable:', error)
+              return EMPTY_TRAJECTORY
+            }
           },
-          subscribe: function (listener) { return target.subscribe(listener) }
+          subscribe: function (listener) {
+            try {
+              return target.subscribe(listener)
+            } catch (error) {
+              console.warn('[dsh-cockpit] the trajectory subscription failed:', error)
+              return function () {}
+            }
+          }
         }
       } catch (error) {
         console.warn('[dsh-cockpit] the session trajectory is unavailable:', error)
