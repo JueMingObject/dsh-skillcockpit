@@ -42,12 +42,17 @@ export function textOf(node) {
  *   promises resolve, and the effects' cleanups.
  */
 export function createPanelRenderer(mounted, props) {
-  const store = { values: [], deps: [], pending: [], cursor: 0 }
+  const store = { values: [], deps: [], pending: [], cursor: 0, dirty: false }
   mounted.hookRuntime.current = {
     useState(initial) {
       const at = store.cursor++
       if (!(at in store.values)) store.values[at] = typeof initial === 'function' ? initial() : initial
-      const set = next => { store.values[at] = typeof next === 'function' ? next(store.values[at]) : next }
+      const set = next => {
+        store.values[at] = typeof next === 'function' ? next(store.values[at]) : next
+        // React re-renders after a state write; the harness has to as well, or
+        // state set from an effect would only show up on the caller's next call.
+        store.dirty = true
+      }
       return [store.values[at], set]
     },
     useEffect(run, watch) {
@@ -63,14 +68,19 @@ export function createPanelRenderer(mounted, props) {
   return {
     cleanups,
     render() {
-      store.cursor = 0
-      // The component registers its effects while rendering, so commit them
-      // after the tree exists — the same order React uses.
-      const tree = mounted.panel.component(props)
-      const effects = store.pending.splice(0)
-      for (const effect of effects) {
-        const cleanup = effect()
-        if (typeof cleanup === 'function') cleanups.push(cleanup)
+      let tree
+      for (let pass = 0; pass < 8; pass += 1) {
+        store.cursor = 0
+        store.dirty = false
+        // The component registers its effects while rendering, so commit them
+        // after the tree exists — the same order React uses.
+        tree = mounted.panel.component(props)
+        const effects = store.pending.splice(0)
+        for (const effect of effects) {
+          const cleanup = effect()
+          if (typeof cleanup === 'function') cleanups.push(cleanup)
+        }
+        if (store.dirty === false) break
       }
       return tree
     },

@@ -68,6 +68,7 @@ function mount(options = {}) {
     JSON,
     Promise,
     AbortController,
+    Date,
     setTimeout,
     clearTimeout
   }
@@ -92,6 +93,28 @@ function mount(options = {}) {
   if (options.withNative !== false) live.push(nativeSource)
   const disposers = []
   const panel = { definition: undefined, component: undefined, inject: undefined, slotName: undefined, key: undefined }
+  // The panel reads Session data, not the catalog: one Trajectory target whose
+  // snapshot the test replaces to simulate live and settled skill loads.
+  const trajectory = {
+    snapshot: options.trajectory ?? { eventNodes: [], runningCalls: [] },
+    listeners: new Set()
+  }
+  const binding = { session: 's1' }
+  const sessionsService = {
+    subagentAddress: () => (options.subagent === true ? 'agent/s1/sub' : undefined),
+    binding: id => (options.withSession === false || id !== 's1' ? undefined : binding)
+  }
+  const conversationService = {
+    binding: () => ({
+      target: name => (name !== 'trajectory' ? undefined : {
+        getSnapshot: () => trajectory.snapshot,
+        subscribe: listener => {
+          trajectory.listeners.add(listener)
+          return () => { trajectory.listeners.delete(listener) }
+        }
+      })
+    })
+  }
   const ctx = {
     remote: {
       skills: {
@@ -100,8 +123,13 @@ function mount(options = {}) {
           : { ok: true, value: { skills: CATALOG } })
       }
     },
-    sessions: { subagentAddress: () => (options.subagent === true ? 'agent/s1/sub' : undefined) },
-    get: name => (name === 'inputTriggers' && options.withInputTriggers !== false ? inputTriggers : undefined),
+    sessions: sessionsService,
+    get: name => {
+      if (name === 'inputTriggers') return options.withInputTriggers === false ? undefined : inputTriggers
+      if (name === 'sessions') return sessionsService
+      if (name === 'uiConversation') return conversationService
+      return undefined
+    },
     effect: (fn) => { disposers.push(fn()) },
     inject: (services, callback) => {
       const owner = {
@@ -147,6 +175,14 @@ function mount(options = {}) {
     panel,
     hookRuntime,
     copied,
+    trajectory,
+    /** Publish a new snapshot the way the Conversation target would. */
+    emitTrajectory: snapshot => {
+      trajectory.snapshot = snapshot
+      for (const listener of [...trajectory.listeners]) listener()
+    },
+    /** The cross-session ledger this mount has written so far. */
+    usageLedger: () => JSON.parse(context.localStorage.store['dsh.cockpit.usage'] ?? '{}'),
     dispose: () => disposers.forEach(fn => fn())
   }
 }
@@ -334,61 +370,120 @@ test('the cockpit tab type and its body register under one id', () => {
   assert.equal(panel.inject('s1').sessionId, 's1', 'the body learns its session from inject')
 })
 
-test('the panel lists every skill under its group', async () => {
-  const mounted = mount()
+const usageSnapshot = () => {
+  const now = Date.now()
+  return {
+    eventNodes: [
+      {
+        kind: 'tool-result', seq: 1, time: now - 180000, callTime: now - 190000, isError: false, subCalls: [],
+        call: { name: 'skill', argsRaw: '{"name":"browse"}' }
+      },
+      {
+        kind: 'tool-result', seq: 2, time: now - 60000, callTime: now - 60000, isError: false, subCalls: [],
+        call: { name: 'skill', argsRaw: '{"name":"ship"}' }
+      },
+      { kind: 'user', seq: 3, time: now - 30000, content: [{ type: 'text', text: '/qa 跑一遍' }] },
+      {
+        kind: 'tool-result', seq: 4, time: now - 20000, callTime: now - 20000, isError: false, subCalls: [],
+        call: { name: 'read', argsRaw: '{"file_path":"x"}' }
+      }
+    ],
+    runningCalls: [{ callId: 'c1', name: 'skill', argsRaw: '{"name":"browse"}', time: now }]
+  }
+}
+
+test('the panel splits running skills from the ones already used', () => {
+  const mounted = mount({ trajectory: usageSnapshot() })
   const view = createPanelRenderer(mounted, mounted.panel.inject('s1'))
-  view.render()
-  await view.settle()
   const tree = view.render()
 
-  assert.equal(byClass(tree, 'dsh-cockpit-row').length, CATALOG.length)
-  const heads = byClass(tree, 'dsh-cockpit-group-name').map(textOf)
-  assert.deepEqual(heads, ['⚡ gstack 工作流', '📱 鸿蒙与 ArkUI', '🎬 影视与漫剧', '✍️ 编剧与文学',
-    '💻 代码手艺与审查', '📊 产品策划与架构', '📢 增长运营与自媒体', '🛠️ 通用工具与办公', '📦 其他实用技能'])
-  assert.match(textOf(view.render()), /11 个技能 · 9 组/)
+  assert.deepEqual(byClass(tree, 'dsh-cockpit-section').map(textOf),
+    ['正在运行', '本会话用过', '全部会话累计'])
+  const names = byClass(tree, 'dsh-cockpit-row-name').map(textOf)
+  assert.deepEqual(names, ['browse', 'qa', 'ship', 'browse', 'qa', 'ship', 'browse'],
+    'running first, then this session by recency, then the ledger by recency')
+  assert.deepEqual(byClass(tree, 'dsh-cockpit-live').map(textOf), ['运行中'])
+  assert.match(textOf(tree), /本会话 3 个/)
+  assert.ok(!names.includes('read'), 'a non-skill tool call is not a skill use')
   view.cleanups.forEach(cleanup => cleanup())
 })
 
-test('typing in the panel filters rows and keeps the Chinese label', async () => {
-  const mounted = mount()
+test('a literal /name message counts as a use, not only the tool call', () => {
+  const mounted = mount({ trajectory: usageSnapshot() })
   const view = createPanelRenderer(mounted, mounted.panel.inject('s1'))
-  view.render()
-  await view.settle()
-  const [search] = byClass(view.render(), 'dsh-cockpit-search')
-  search.props.onChange({ target: { value: '浏览器' } })
   const tree = view.render()
 
-  const rows = byClass(tree, 'dsh-cockpit-row')
-  assert.equal(rows.length, 1)
-  assert.equal(textOf(byClass(rows[0], 'dsh-cockpit-row-label')[0]), '无头浏览器')
-  assert.equal(textOf(byClass(rows[0], 'dsh-cockpit-row-name')[0]), 'browse')
+  const qa = byClass(tree, 'dsh-cockpit-row').find(row => textOf(byClass(row, 'dsh-cockpit-row-name')[0]) === 'qa')
+  assert.ok(qa, 'the slash message produced a row')
+  assert.match(textOf(qa), /1 次 · /)
   view.cleanups.forEach(cleanup => cleanup())
 })
 
-test('clicking a panel row copies the slash command, not the label', async () => {
+test('replaying a snapshot does not inflate the cross-session ledger', () => {
+  const mounted = mount({ trajectory: usageSnapshot() })
+  const view = createPanelRenderer(mounted, mounted.panel.inject('s1'))
+  view.render()
+  mounted.emitTrajectory(usageSnapshot())
+
+  const ledger = mounted.usageLedger()
+  assert.equal(ledger.totals.browse.count, 1, 'the same absolute count is not added twice')
+  assert.equal(ledger.totals.qa.count, 1)
+
+  const grown = usageSnapshot()
+  grown.eventNodes.push({
+    kind: 'tool-result', seq: 9, time: Date.now(), callTime: Date.now(), isError: false, subCalls: [],
+    call: { name: 'skill', argsRaw: '{"name":"qa"}' }
+  })
+  mounted.emitTrajectory(grown)
+  assert.equal(mounted.usageLedger().totals.qa.count, 2, 'only the delta is added')
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('a session that used nothing explains what to do', () => {
+  const mounted = mount()
+  const view = createPanelRenderer(mounted, mounted.panel.inject('s1'))
+  const tree = view.render()
+
+  assert.equal(byClass(tree, 'dsh-cockpit-section').length, 0)
+  assert.match(textOf(byClass(tree, 'dsh-cockpit-empty')[0]), /还没用过技能/)
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('an unopened session says why there is no history', () => {
+  const mounted = mount({ withSession: false })
+  const view = createPanelRenderer(mounted, mounted.panel.inject('s1'))
+  const tree = view.render()
+
+  assert.match(textOf(byClass(tree, 'dsh-cockpit-error')[0]), /读不到这个会话的轨迹/)
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('a skill that starts running shows up without reopening the panel', () => {
   const mounted = mount()
   const view = createPanelRenderer(mounted, mounted.panel.inject('s1'))
   view.render()
-  await view.settle()
+  mounted.emitTrajectory({
+    eventNodes: [],
+    runningCalls: [{ callId: 'c9', name: 'skill', argsRaw: '{"name":"ship"}', time: Date.now() }]
+  })
+
+  const tree = view.render()
+  assert.deepEqual(byClass(tree, 'dsh-cockpit-section').map(textOf), ['正在运行'])
+  assert.deepEqual(byClass(tree, 'dsh-cockpit-row-name').map(textOf), ['ship'])
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('clicking a used skill copies its slash command', async () => {
+  const mounted = mount({ trajectory: usageSnapshot() })
+  const view = createPanelRenderer(mounted, mounted.panel.inject('s1'))
+  view.render()
   const rows = byClass(view.render(), 'dsh-cockpit-row')
-  const browse = rows.find(row => textOf(byClass(row, 'dsh-cockpit-row-name')[0]) === 'browse')
-  browse.props.onClick()
+  const ship = rows.find(row => textOf(byClass(row, 'dsh-cockpit-row-name')[0]) === 'ship')
+  ship.props.onClick()
   await view.settle()
 
-  assert.deepEqual(mounted.copied, ['/browse '])
-  assert.match(textOf(view.render()), /已复制 \/browse/)
-  view.cleanups.forEach(cleanup => cleanup())
-})
-
-test('a failed skill request shows the error instead of an empty list', async () => {
-  const mounted = mount({ listFails: true })
-  const view = createPanelRenderer(mounted, mounted.panel.inject('s1'))
-  view.render()
-  await view.settle()
-  const tree = view.render()
-
-  assert.equal(byClass(tree, 'dsh-cockpit-row').length, 0)
-  assert.match(textOf(byClass(tree, 'dsh-cockpit-error')[0]), /技能服务不可用/)
+  assert.deepEqual(mounted.copied, ['/ship '])
+  assert.match(textOf(view.render()), /已复制 \/ship/)
   view.cleanups.forEach(cleanup => cleanup())
 })
 
