@@ -65,6 +65,21 @@ export function createPanelRenderer(mounted, props) {
     }
   }
   const cleanups = []
+  /**
+   * Call child function components the way React would.
+   *
+   * The panel is one component, but its settings view is another one below it;
+   * without this the tree stops at a descriptor whose `type` is a function and
+   * every assertion inside the settings view would see an empty node. Hook order
+   * stays stable because a parent's hooks all run before its children's.
+   */
+  const expand = node => {
+    if (Array.isArray(node)) return node.map(expand)
+    if (node === null || node === undefined || typeof node !== 'object') return node
+    if (typeof node.type === 'function') return expand(node.type(node.props))
+    const children = (node.props?.children ?? []).map(expand)
+    return { ...node, props: { ...node.props, children } }
+  }
   return {
     cleanups,
     render() {
@@ -74,7 +89,7 @@ export function createPanelRenderer(mounted, props) {
         store.dirty = false
         // The component registers its effects while rendering, so commit them
         // after the tree exists — the same order React uses.
-        tree = mounted.panel.component(props)
+        tree = expand(mounted.panel.component(props))
         const effects = store.pending.splice(0)
         for (const effect of effects) {
           const cleanup = effect()

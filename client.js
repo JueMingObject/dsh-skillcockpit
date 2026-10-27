@@ -303,7 +303,15 @@ window.__ModuleLoader__.load({
       return name.indexOf(core) !== -1
     }
 
-    function matchSkillGroup(name, groups) {
+    function matchSkillGroup(name, groups, overrides) {
+      // An explicit home wins over every pattern: users place the handful of
+      // skills they care about, and the patterns keep doing the bulk work.
+      if (overrides && typeof overrides === 'object' && typeof overrides[name] === 'string') {
+        var wanted = overrides[name]
+        for (var w = 0; w < groups.length; w++) {
+          if (groups[w].id === wanted) return groups[w]
+        }
+      }
       var sorted = sortGroups(groups)
       for (var i = 0; i < sorted.length; i++) {
         var patterns = sorted[i].patterns || []
@@ -320,6 +328,23 @@ window.__ModuleLoader__.load({
       })
     }
 
+    /**
+     * The live configuration. `apply` fills it in and the settings view writes
+     * it back, so a saved change reaches the next `/` keystroke without a
+     * reload — the candidates callback reads this object, not a snapshot.
+     */
+    var CONFIG = { groups: DEFAULT_GROUPS, overrides: {}, replaceNative: true }
+
+    function normalizeOverrides(value) {
+      var out = {}
+      if (value && typeof value === 'object') {
+        for (var key in value) {
+          if (typeof value[key] === 'string' && value[key] !== '') out[key] = value[key]
+        }
+      }
+      return out
+    }
+
     function loadCockpitConfig() {
       try {
         if (typeof localStorage !== 'undefined') {
@@ -327,23 +352,41 @@ window.__ModuleLoader__.load({
           if (raw) {
             var parsed = JSON.parse(raw)
             if (parsed && Array.isArray(parsed.groups) && parsed.groups.length > 0) {
-              return { groups: parsed.groups, replaceNative: parsed.replaceNative !== false }
+              return {
+                groups: parsed.groups,
+                overrides: normalizeOverrides(parsed.overrides),
+                replaceNative: parsed.replaceNative !== false
+              }
             }
           }
         }
       } catch (error) {
         console.warn('[dsh-cockpit] config unreadable, using defaults:', error)
       }
-      return { groups: DEFAULT_GROUPS, replaceNative: true }
+      return { groups: DEFAULT_GROUPS, overrides: {}, replaceNative: true }
     }
 
     function saveCockpitConfig(config) {
       try {
         if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('dsh.cockpit.config', JSON.stringify(config))
+          localStorage.setItem('dsh.cockpit.config', JSON.stringify({
+            groups: config.groups,
+            overrides: normalizeOverrides(config.overrides),
+            replaceNative: config.replaceNative !== false
+          }))
+          return true
         }
       } catch (error) {
         console.warn('[dsh-cockpit] config not saved:', error)
+      }
+      return false
+    }
+
+    function clearCockpitConfig() {
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.removeItem('dsh.cockpit.config')
+      } catch (error) {
+        console.warn('[dsh-cockpit] config not cleared:', error)
       }
     }
 
@@ -369,7 +412,7 @@ window.__ModuleLoader__.load({
     }
 
     /** Bucket the catalog into the configured groups, dropping empty ones. */
-    function bucketSkills(skills, groups) {
+    function bucketSkills(skills, groups, overrides) {
       var buckets = []
       var byId = {}
       var ordered = sortGroups(groups).concat([FALLBACK_GROUP])
@@ -382,7 +425,7 @@ window.__ModuleLoader__.load({
       }
       for (var j = 0; j < skills.length; j++) {
         var skill = skills[j]
-        var home = matchSkillGroup(skill.name, groups)
+        var home = matchSkillGroup(skill.name, groups, overrides)
         var target = byId[home.id] || byId[FALLBACK_GROUP.id]
         target.skills.push(skill)
       }
@@ -443,8 +486,8 @@ window.__ModuleLoader__.load({
      * `<groupId>/<filter>` lists one group; anything else is the root: folders
      * when nothing is typed, folders plus matching skills when searching.
      */
-    function buildCandidates(skills, query, groups) {
-      var buckets = bucketSkills(skills, groups)
+    function buildCandidates(skills, query, groups, overrides) {
+      var buckets = bucketSkills(skills, groups, overrides)
       var trimmed = (query || '').trim()
       var slash = trimmed.indexOf('/')
       if (slash >= 0) {
@@ -519,6 +562,7 @@ window.__ModuleLoader__.load({
     var SKILL_TOOL = 'skill'
     var USAGE_KEY = 'dsh.cockpit.usage'
     var SESSIONS
+    var SKILLS_REMOTE
     var ROOT_CTX
     var EMPTY_TRAJECTORY = { eventNodes: [], runningCalls: [] }
 
@@ -545,6 +589,20 @@ window.__ModuleLoader__.load({
       '.dsh-cockpit-empty{padding:18px 12px;opacity:.55;text-align:center;font-size:12px;line-height:1.6}',
       '.dsh-cockpit-error{padding:14px 12px;font-size:12px;color:#e0a79b}',
       '.dsh-cockpit-foot{padding:6px 12px 10px;opacity:.45;font-size:11px;border-top:1px solid rgba(127,127,127,.18)}',
+      '.dsh-cockpit-settings{flex:1;min-height:0;overflow:auto;padding:0 12px 14px}',
+      '.dsh-cockpit-sblock{display:flex;flex-direction:column;gap:2px}',
+      '.dsh-cockpit-srow{display:flex;align-items:center;gap:5px;padding:2px 0}',
+      '.dsh-cockpit-sname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.85}',
+      '.dsh-cockpit-grow{flex:1;min-width:0;border:1px solid rgba(127,127,127,.28);border-radius:5px;background:rgba(127,127,127,.07);color:inherit;font:inherit;font-size:12px;padding:3px 6px;outline:none}',
+      '.dsh-cockpit-grow:focus{border-color:rgba(127,127,127,.55)}',
+      '.dsh-cockpit-mini{border:0;background:transparent;color:inherit;opacity:.55;cursor:pointer;font:inherit;font-size:11px;padding:2px 5px;border-radius:4px;white-space:nowrap}',
+      '.dsh-cockpit-mini:hover:enabled{opacity:1;background:rgba(127,127,127,.16)}',
+      '.dsh-cockpit-mini:disabled{opacity:.2;cursor:default}',
+      '.dsh-cockpit-pick{max-width:48%;border:1px solid rgba(127,127,127,.28);border-radius:5px;background:rgba(127,127,127,.07);color:inherit;font:inherit;font-size:11.5px;padding:2px 4px;outline:none}',
+      '.dsh-cockpit-io{width:100%;box-sizing:border-box;height:72px;resize:vertical;border:1px solid rgba(127,127,127,.28);border-radius:6px;background:rgba(127,127,127,.07);color:inherit;font:inherit;font-size:11px;line-height:1.45;padding:6px;outline:none}',
+      '.dsh-cockpit-save{border:1px solid rgba(127,127,127,.4);background:rgba(127,127,127,.16);color:inherit;font:inherit;font-size:12px;padding:4px 12px;border-radius:6px;cursor:pointer}',
+      '.dsh-cockpit-save:hover{background:rgba(127,127,127,.28)}',
+      '.dsh-cockpit-note{font-size:11px;opacity:.75}',
       '.dsh-cockpit-toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(38,38,38,.94);color:#fff;padding:4px 10px;border-radius:999px;font-size:11px;pointer-events:none;white-space:nowrap}'
     ].join('')
 
@@ -878,6 +936,325 @@ window.__ModuleLoader__.load({
       return React.createElement('div', { className: 'dsh-cockpit-group', key: key }, children)
     }
 
+    // --- 3b. Settings: the user's own groups, editable without devtools ---
+
+    function cloneJson(value) {
+      return JSON.parse(JSON.stringify(value))
+    }
+
+    function withField(source, field, value) {
+      var copy = cloneJson(source)
+      copy[field] = value
+      return copy
+    }
+
+    /** A stable id for a new group, derived from its visible name. */
+    function slugId(name, taken) {
+      var base = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+      if (base === '') base = 'group'
+      var id = base
+      var suffix = 2
+      while (taken.indexOf(id) !== -1) {
+        id = base + '-' + suffix
+        suffix += 1
+      }
+      return id
+    }
+
+    function lowestPriority(groups) {
+      var lowest = 0
+      for (var i = 0; i < groups.length; i++) {
+        var priority = groups[i].priority || 0
+        if (i === 0 || priority < lowest) lowest = priority
+      }
+      return lowest
+    }
+
+    var MAX_ASSIGN_ROWS = 120
+
+    function CockpitSettings(props) {
+      var draftPair = React.useState(cloneJson({ groups: props.groups, overrides: props.overrides }))
+      var newNamePair = React.useState('')
+      var queryPair = React.useState('')
+      var catalogPair = React.useState({ list: [], problem: '' })
+      var openPair = React.useState('')
+      var ioPair = React.useState('')
+      var notePair = React.useState('')
+
+      var draft = draftPair[0]
+      var newName = newNamePair[0]
+      var query = queryPair[0]
+      var catalog = catalogPair[0]
+      var open = openPair[0]
+      var io = ioPair[0]
+      var note = notePair[0]
+
+      React.useEffect(function () {
+        var cancelled = false
+        if (SKILLS_REMOTE === undefined || typeof SKILLS_REMOTE.list !== 'function') {
+          catalogPair[1]({ list: [], problem: '这一版拿不到技能目录：分组照样可用，只是没法在这里逐个指派' })
+          return undefined
+        }
+        SKILLS_REMOTE.list({ sessionId: props.sessionId }).then(function (result) {
+          if (cancelled) return
+          if (!result || !result.ok) {
+            catalogPair[1]({ list: [], problem: '读不到技能目录：' + String((result && result.error) || '未知原因') })
+            return
+          }
+          catalogPair[1]({ list: (result.value && result.value.skills) || [], problem: '' })
+        }, function (error) {
+          if (!cancelled) catalogPair[1]({ list: [], problem: '读不到技能目录：' + String(error) })
+        })
+        return function () { cancelled = true }
+      }, [])
+
+      var update = function (next) {
+        draftPair[1]({ groups: next.groups, overrides: next.overrides })
+        notePair[1]('')
+      }
+
+      var rename = function (id, value) {
+        update({
+          groups: draft.groups.map(function (group) {
+            return group.id === id ? withField(group, 'name', value) : group
+          }),
+          overrides: draft.overrides
+        })
+      }
+
+      var setPatterns = function (id, value) {
+        var patterns = value.split(',').map(function (part) { return part.trim() })
+          .filter(function (part) { return part !== '' })
+        update({
+          groups: draft.groups.map(function (group) {
+            return group.id === id ? withField(group, 'patterns', patterns) : group
+          }),
+          overrides: draft.overrides
+        })
+      }
+
+      var move = function (id, delta) {
+        var ordered = sortGroups(draft.groups)
+        var from = -1
+        for (var i = 0; i < ordered.length; i++) if (ordered[i].id === id) from = i
+        var to = from + delta
+        if (from < 0 || to < 0 || to >= ordered.length) return
+        var moved = ordered.splice(from, 1)[0]
+        ordered.splice(to, 0, moved)
+        update({
+          groups: ordered.map(function (group, index) { return withField(group, 'priority', 100 - index * 5) }),
+          overrides: draft.overrides
+        })
+      }
+
+      var remove = function (id) {
+        var groups = draft.groups.filter(function (group) { return group.id !== id })
+        if (groups.length === 0) {
+          notePair[1]('至少要留一个分组，不然菜单就是空的')
+          return
+        }
+        var overrides = {}
+        for (var skill in draft.overrides) {
+          if (draft.overrides[skill] !== id) overrides[skill] = draft.overrides[skill]
+        }
+        update({ groups: groups, overrides: overrides })
+      }
+
+      var add = function () {
+        var name = newName.replace(/^\s+|\s+$/g, '')
+        if (name === '') {
+          notePair[1]('先给新分组起个名字')
+          return
+        }
+        var taken = draft.groups.map(function (group) { return group.id })
+        var lowest = lowestPriority(draft.groups)
+        newNamePair[1]('')
+        update({
+          groups: draft.groups.concat([{
+            id: slugId(name, taken),
+            name: name,
+            priority: lowest - 5,
+            patterns: []
+          }]),
+          overrides: draft.overrides
+        })
+        notePair[1]('已加「' + name + '」，点保存才生效')
+      }
+
+      var assign = function (skillName, groupId) {
+        var overrides = cloneJson(draft.overrides)
+        if (groupId === '') delete overrides[skillName]
+        else overrides[skillName] = groupId
+        update({ groups: draft.groups, overrides: overrides })
+      }
+
+      var save = function () {
+        var ok = props.onSave({ groups: draft.groups, overrides: draft.overrides })
+        notePair[1](ok ? '已保存：下一次敲 / 就是新分组' : '保存失败：这个环境不让写 localStorage')
+      }
+
+      var reset = function () {
+        draftPair[1](cloneJson(props.onReset()))
+        ioPair[1]('')
+        notePair[1]('已恢复默认分组，点保存才生效')
+      }
+
+      var exportJson = function () {
+        ioPair[1](JSON.stringify({ groups: draft.groups, overrides: draft.overrides }, null, 2))
+        notePair[1]('已放进下面的框里，可以全选复制存成文件')
+      }
+
+      var importJson = function () {
+        var parsed
+        try {
+          parsed = JSON.parse(io)
+        } catch (error) {
+          notePair[1]('这段 JSON 解析不了：' + String(error && error.message ? error.message : error))
+          return
+        }
+        if (!parsed || !Array.isArray(parsed.groups) || parsed.groups.length === 0) {
+          notePair[1]('JSON 里没有 groups 数组')
+          return
+        }
+        var groups = parsed.groups.filter(function (group) {
+          return group && typeof group.id === 'string' && typeof group.name === 'string'
+        })
+        if (groups.length === 0) {
+          notePair[1]('groups 里没有一条同时带 id 和 name 的')
+          return
+        }
+        draftPair[1]({ groups: groups, overrides: normalizeOverrides(parsed.overrides) })
+        notePair[1]('已读进草稿，点保存才生效')
+      }
+
+      // How many skills each group actually owns right now, so a rename or a
+      // removed pattern is visible before it is saved.
+      var counts = {}
+      for (var c = 0; c < catalog.list.length; c++) {
+        var homeId = matchSkillGroup(catalog.list[c].name, draft.groups, draft.overrides).id
+        counts[homeId] = (counts[homeId] || 0) + 1
+      }
+
+      var ordered = sortGroups(draft.groups)
+      var groupRows = []
+      for (var g = 0; g < ordered.length; g++) {
+        var group = ordered[g]
+        var ownPatterns = group.patterns || []
+        groupRows.push(React.createElement('div', { className: 'dsh-cockpit-srow dsh-cockpit-grouprow', key: 'g:' + group.id },
+          React.createElement('input', {
+            className: 'dsh-cockpit-grow',
+            type: 'text',
+            title: '分组名，只影响显示',
+            value: group.name,
+            onChange: function (id) {
+              return function (event) { rename(id, event.target.value) }
+            }(group.id)
+          }),
+          React.createElement('span', { className: 'dsh-cockpit-sub', title: '当前归到这个分组的技能数' },
+            String(counts[group.id] || 0)),
+          React.createElement('button', {
+            className: 'dsh-cockpit-mini', type: 'button', title: '上移（先匹配的先到）',
+            disabled: g === 0, onClick: function (id) { return function () { move(id, -1) } }(group.id)
+          }, '↑'),
+          React.createElement('button', {
+            className: 'dsh-cockpit-mini', type: 'button', title: '下移',
+            disabled: g === ordered.length - 1, onClick: function (id) { return function () { move(id, 1) } }(group.id)
+          }, '↓'),
+          React.createElement('button', {
+            className: 'dsh-cockpit-mini', type: 'button', title: '改名字派规则',
+            onClick: function (id) { return function () { openPair[1](open === id ? '' : id) } }(group.id)
+          }, '规则'),
+          React.createElement('button', {
+            className: 'dsh-cockpit-mini', type: 'button', title: '删掉这个分组',
+            onClick: function (id) { return function () { remove(id) } }(group.id)
+          }, '×')
+        ))
+        if (open === group.id) {
+          groupRows.push(React.createElement('input', {
+            className: 'dsh-cockpit-grow',
+            key: 'p:' + group.id,
+            type: 'text',
+            placeholder: '通配符，逗号分隔，例如 hmos-*, arkuix-*, 鸿蒙*',
+            title: '这一组收哪些技能（* 表示任意）。空着就只收下面「技能归属」里指名放进来的',
+            value: ownPatterns.join(', '),
+            onChange: function (id) {
+              return function (event) { setPatterns(id, event.target.value) }
+            }(group.id)
+          }))
+        }
+      }
+
+      var needle = query.replace(/^\s+|\s+$/g, '').toLowerCase()
+      var assignRows = []
+      for (var s = 0; s < catalog.list.length && assignRows.length < MAX_ASSIGN_ROWS; s++) {
+        var skill = catalog.list[s]
+        if (needle !== '' && !skillMatches(skill, needle)) continue
+        var chosen = draft.overrides[skill.name] || ''
+        var options = [React.createElement('option', { value: '', key: 'auto' }, '按规则')]
+        for (var o = 0; o < ordered.length; o++) {
+          options.push(React.createElement('option', { value: ordered[o].id, key: ordered[o].id }, ordered[o].name))
+        }
+        assignRows.push(React.createElement('div', { className: 'dsh-cockpit-srow dsh-cockpit-assignrow', key: 'a:' + skill.name },
+          React.createElement('span', { className: 'dsh-cockpit-sname', title: skill.name }, skill.name),
+          React.createElement('select', {
+            className: 'dsh-cockpit-pick',
+            value: chosen,
+            onChange: function (name) {
+              return function (event) { assign(name, event.target.value) }
+            }(skill.name)
+          }, options)
+        ))
+      }
+
+      var body = [
+        React.createElement('div', { className: 'dsh-cockpit-section', key: 't1' }, '分组 · 越靠上越先匹配'),
+        React.createElement('div', { className: 'dsh-cockpit-sblock', key: 'groups' }, groupRows),
+        React.createElement('div', { className: 'dsh-cockpit-srow', key: 'add' },
+          React.createElement('input', {
+            className: 'dsh-cockpit-grow',
+            type: 'text',
+            placeholder: '新分组名，例如 📚 我的读书技能',
+            value: newName,
+            onChange: function (event) { newNamePair[1](event.target.value) },
+            onKeyDown: function (event) { if (event.key === 'Enter') add() }
+          }),
+          React.createElement('button', { className: 'dsh-cockpit-mini', type: 'button', onClick: add }, '添加')
+        ),
+        React.createElement('div', { className: 'dsh-cockpit-section', key: 't2' }, '技能归属 · 写死的优先于规则'),
+        React.createElement('input', {
+          className: 'dsh-cockpit-search',
+          key: 'asearch',
+          type: 'search',
+          placeholder: '搜技能名，还没归好类的先看这儿',
+          value: query,
+          onChange: function (event) { queryPair[1](event.target.value) }
+        })
+      ]
+      if (catalog.problem !== '') {
+        body.push(React.createElement('div', { className: 'dsh-cockpit-error', key: 'cat' }, catalog.problem))
+      }
+      body.push(React.createElement('div', { className: 'dsh-cockpit-sblock', key: 'assign' }, assignRows))
+      body.push(React.createElement('div', { className: 'dsh-cockpit-section', key: 't3' }, '导入 / 导出'))
+      body.push(React.createElement('textarea', {
+        className: 'dsh-cockpit-io',
+        key: 'io',
+        placeholder: '把导出的 JSON 放这儿，再点「从框里导入」；也可以直接贴别人分享的分组',
+        value: io,
+        onChange: function (event) { ioPair[1](event.target.value) }
+      }))
+      body.push(React.createElement('div', { className: 'dsh-cockpit-srow', key: 'iob' },
+        React.createElement('button', { className: 'dsh-cockpit-mini', type: 'button', onClick: exportJson }, '导出'),
+        React.createElement('button', { className: 'dsh-cockpit-mini', type: 'button', onClick: importJson }, '从框里导入'),
+        React.createElement('button', { className: 'dsh-cockpit-mini', type: 'button', title: '清掉本机保存的配置', onClick: reset }, '恢复默认')
+      ))
+      body.push(React.createElement('div', { className: 'dsh-cockpit-srow', key: 'save' },
+        React.createElement('button', { className: 'dsh-cockpit-save', type: 'button', onClick: save }, '保存'),
+        note === '' ? null : React.createElement('span', { className: 'dsh-cockpit-note' }, note)
+      ))
+
+      return React.createElement('div', { className: 'dsh-cockpit-settings' }, body)
+    }
+
     function CockpitPanel(props) {
       var sessionId = props === undefined ? undefined : props.sessionId
 
@@ -887,6 +1264,7 @@ window.__ModuleLoader__.load({
       var copiedPair = React.useState('')
       var problemPair = React.useState('')
       var tickPair = React.useState(0)
+      var modePair = React.useState('usage')
 
       var usage = usagePair[0]
       var totals = totalsPair[0]
@@ -894,6 +1272,7 @@ window.__ModuleLoader__.load({
       var copied = copiedPair[0]
       var problem = problemPair[0]
       var tick = tickPair[0]
+      var mode = modePair[0]
 
       React.useEffect(function () {
         var cancelled = false
@@ -930,17 +1309,56 @@ window.__ModuleLoader__.load({
       var totalCount = 0
       for (var total in totals) totalCount += 1
 
-      var head = React.createElement('div', { className: 'dsh-cockpit-head', key: 'head' },
-        React.createElement('span', { className: 'dsh-cockpit-title' }, '技能驾驶舱'),
-        React.createElement('span', { className: 'dsh-cockpit-sub' },
-          '本会话 ' + usedCount + ' 个 · 累计 ' + totalCount + ' 个'),
+      var saveDraft = function (next) {
+        CONFIG = { groups: next.groups, overrides: next.overrides, replaceNative: CONFIG.replaceNative }
+        var saved = saveCockpitConfig(CONFIG)
+        if (saved) CONFIG = loadCockpitConfig()
+        return saved
+      }
+
+      var resetDraft = function () {
+        clearCockpitConfig()
+        CONFIG = loadCockpitConfig()
+        return { groups: CONFIG.groups, overrides: CONFIG.overrides }
+      }
+
+      var headChildren = [
+        React.createElement('span', { className: 'dsh-cockpit-title', key: 'title' }, '技能驾驶舱'),
+        React.createElement('span', { className: 'dsh-cockpit-sub', key: 'sub' },
+          mode === 'settings'
+            ? '分组与归属'
+            : '本会话 ' + usedCount + ' 个 · 累计 ' + totalCount + ' 个'),
         React.createElement('button', {
           className: 'dsh-cockpit-action',
+          key: 'mode',
+          type: 'button',
+          title: mode === 'settings' ? '回到用过的技能' : '改分组、改归属，不用开发者工具',
+          onClick: function () { modePair[1](mode === 'settings' ? 'usage' : 'settings') }
+        }, mode === 'settings' ? '返回' : '设置')
+      ]
+      if (mode !== 'settings') {
+        headChildren.push(React.createElement('button', {
+          className: 'dsh-cockpit-action',
+          key: 'refresh',
           type: 'button',
           title: '重新读取会话记录',
           onClick: function () { tickPair[1](tick + 1) }
-        }, '刷新')
-      )
+        }, '刷新'))
+      }
+      var head = React.createElement('div', { className: 'dsh-cockpit-head', key: 'head' }, headChildren)
+
+      if (mode === 'settings') {
+        return React.createElement('div', { className: 'dsh-cockpit-panel' },
+          head,
+          React.createElement(CockpitSettings, {
+            key: 'settings',
+            sessionId: sessionId,
+            groups: CONFIG.groups,
+            overrides: CONFIG.overrides,
+            onSave: saveDraft,
+            onReset: resetDraft
+          }))
+      }
 
       var search = React.createElement('input', {
         className: 'dsh-cockpit-search',
@@ -1064,9 +1482,10 @@ window.__ModuleLoader__.load({
       apply: function (ctx) {
         var skillsRemote = ctx.remote && ctx.remote.skills
         var sessions = ctx.sessions
-        var config = loadCockpitConfig()
+        CONFIG = loadCockpitConfig()
         ZH = mergeZh(SKILL_ZH, readZhOverrides())
         SESSIONS = sessions
+        SKILLS_REMOTE = skillsRemote
         ROOT_CTX = ctx
 
         // The panel is independent of the slash menu: register it first, so a
@@ -1095,7 +1514,7 @@ window.__ModuleLoader__.load({
               return []
             }
             var skills = (result.value && result.value.skills) || []
-            return buildCandidates(skills, request.query, config.groups)
+            return buildCandidates(skills, request.query, CONFIG.groups, CONFIG.overrides)
           }, function (error) {
             console.warn('[dsh-cockpit] skills/list rejected:', error)
             return []
@@ -1103,7 +1522,7 @@ window.__ModuleLoader__.load({
         }
 
         function headerFor(session, request) {
-          return buildHeader(request.query, request.drilled, config.groups)
+          return buildHeader(request.query, request.drilled, CONFIG.groups)
         }
 
         function pickFor(pick) {
@@ -1122,7 +1541,7 @@ window.__ModuleLoader__.load({
         // Preferred path: take the native '/' source over in place. One list,
         // and whatever else that source provides (lexicon, reference preview)
         // keeps working. The fields are `readonly` in TypeScript only.
-        var native = config.replaceNative === false
+        var native = CONFIG.replaceNative === false
           ? undefined
           : findNativeSkillSource(inputTriggers)
         if (native !== undefined) {
@@ -1138,7 +1557,7 @@ window.__ModuleLoader__.load({
 
         /** Hide a native source that registers after us (its order is not ours to pick). */
         function dropNativeSkillSource() {
-          if (config.replaceNative === false) return
+          if (CONFIG.replaceNative === false) return
           var list = liveSources(inputTriggers)
           if (list === undefined) return
           for (var i = list.length - 1; i >= 0; i--) {
@@ -1151,7 +1570,7 @@ window.__ModuleLoader__.load({
           name: 'skill-cockpit',
           order: 2,
           candidates: function (session, request) {
-            if (config.replaceNative !== false) dropNativeSkillSource()
+            if (CONFIG.replaceNative !== false) dropNativeSkillSource()
             return candidatesFor(session, request)
           },
           header: headerFor,

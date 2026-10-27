@@ -1,6 +1,6 @@
 {
   "name": "dsh-skills-cockpit",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Grouped, drillable skill menu and a skill-usage cockpit panel for DeepSeek Harness",
   "license": "MIT",
   "type": "module",

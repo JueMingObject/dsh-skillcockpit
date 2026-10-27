@@ -61,7 +61,10 @@ function mount(options = {}) {
         ...(options.storedZh === undefined ? {} : { 'dsh.cockpit.zh': options.storedZh })
       },
       getItem(key) { return this.store[key] ?? null },
-      setItem(key, value) { this.store[key] = value }
+      setItem(key, value) { this.store[key] = value },
+      // The real Web Storage has this; without it `clearCockpitConfig()` throws
+      // into its own try/catch and the reset silently becomes a no-op.
+      removeItem(key) { delete this.store[key] }
     },
     navigator: { clipboard: { writeText: async text => { copied.push(text) } } },
     console: { warn() {}, log() {}, error() {} },
@@ -183,6 +186,8 @@ function mount(options = {}) {
     },
     /** The cross-session ledger this mount has written so far. */
     usageLedger: () => JSON.parse(context.localStorage.store['dsh.cockpit.usage'] ?? '{}'),
+    /** The saved group configuration, or null when nothing was written. */
+    configStore: () => JSON.parse(context.localStorage.store['dsh.cockpit.config'] ?? 'null'),
     dispose: () => disposers.forEach(fn => fn())
   }
 }
@@ -492,4 +497,153 @@ test('the panel still registers when the slash menu cannot', () => {
   assert.equal(mounted.registered.length, 0, 'no slash source without the input-trigger service')
   assert.ok(mounted.panel.definition, 'the sidebar panel is independent of the slash menu')
   assert.ok(mounted.panel.component)
+})
+
+// --- Settings: the groups are editable from the panel, not from devtools ---
+
+/** Find a button by the text it renders. */
+function findButton(tree, label) {
+  for (const name of ['dsh-cockpit-action', 'dsh-cockpit-mini', 'dsh-cockpit-save']) {
+    const hit = byClass(tree, name).find(node => textOf(node) === label)
+    if (hit) return hit
+  }
+  throw new Error(`no button rendering ${label}`)
+}
+
+/** Type into a controlled input the way React would. */
+function setInput(node, value) {
+  assert.equal(typeof node.props.onChange, 'function', 'a controlled field')
+  node.props.onChange({ target: { value } })
+}
+
+async function openSettings(mounted) {
+  const view = createPanelRenderer(mounted, mounted.panel.inject('s1'))
+  findButton(view.render(), '设置').props.onClick({})
+  view.render()
+  await view.settle()
+  return view
+}
+
+test('the settings view shows every group and where the skills went', async () => {
+  const mounted = mount()
+  const view = await openSettings(mounted)
+  const tree = view.render()
+
+  assert.deepEqual(byClass(tree, 'dsh-cockpit-section').map(textOf),
+    ['分组 · 越靠上越先匹配', '技能归属 · 写死的优先于规则', '导入 / 导出'])
+  const rows = byClass(tree, 'dsh-cockpit-grouprow')
+  assert.equal(rows.length, 8, 'the eight defaults are the draft')
+  assert.equal(byClass(rows[0], 'dsh-cockpit-grow')[0].props.value, '⚡ gstack 工作流')
+  assert.ok(byClass(tree, 'dsh-cockpit-assignrow').length > 0, 'the catalog is listed for placing')
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('renaming a group and saving reaches the slash menu without a reload', async () => {
+  const mounted = mount()
+  const view = await openSettings(mounted)
+  const first = byClass(view.render(), 'dsh-cockpit-grouprow')[0]
+  setInput(byClass(first, 'dsh-cockpit-grow')[0], '⚡ 我的 gstack')
+
+  findButton(view.render(), '保存').props.onClick({})
+
+  assert.equal(mounted.configStore().groups[0].name, '⚡ 我的 gstack', 'the rename is persisted')
+  const rows = await ask(mounted.source, '')
+  assert.ok(rows.some(row => row.label === '⚡ 我的 gstack'),
+    'the live config, not a startup snapshot, drives the folders')
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('placing a skill in a group by hand beats the wildcard rules', async () => {
+  const mounted = mount()
+  const view = await openSettings(mounted)
+  const tree = view.render()
+  const row = byClass(tree, 'dsh-cockpit-assignrow').find(node => textOf(node).startsWith('browse'))
+  assert.ok(row, 'browse is in the catalog')
+  setInput(byClass(row, 'dsh-cockpit-pick')[0], 'tools')
+  findButton(view.render(), '保存').props.onClick({})
+
+  const drilled = await ask(mounted.source, 'tools/')
+  assert.ok(drilled.some(candidate => candidate.name === 'browse'),
+    'an explicit home wins over the gstack pattern')
+
+  // And it survives a fresh mount, which is what saving to localStorage buys.
+  const second = mount({ storedConfig: JSON.stringify(mounted.configStore()) })
+  const reopened = await ask(second.source, 'tools/')
+  assert.ok(reopened.some(candidate => candidate.name === 'browse'))
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('a new group can be added and moved to the top', async () => {
+  const mounted = mount()
+  const view = await openSettings(mounted)
+  let tree = view.render()
+  const addField = byClass(tree, 'dsh-cockpit-grow')
+    .find(node => String(node.props.placeholder).startsWith('新分组名'))
+  assert.ok(addField, 'the add-group field is there')
+  setInput(addField, '📚 我的读书技能')
+  findButton(view.render(), '添加').props.onClick({})
+
+  tree = view.render()
+  let rows = byClass(tree, 'dsh-cockpit-grouprow')
+  assert.equal(rows.length, 9)
+  assert.equal(byClass(rows[8], 'dsh-cockpit-grow')[0].props.value, '📚 我的读书技能', 'a new group starts at the bottom')
+
+  findButton(rows[8], '↑').props.onClick({})
+  rows = byClass(view.render(), 'dsh-cockpit-grouprow')
+  assert.equal(byClass(rows[7], 'dsh-cockpit-grow')[0].props.value, '📚 我的读书技能', 'up moves it one slot')
+
+  findButton(view.render(), '保存').props.onClick({})
+  assert.match(mounted.configStore().groups.map(group => group.name).join('|'), /📚 我的读书技能/)
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('restore defaults throws the saved groups away', async () => {
+  const mounted = mount()
+  const view = await openSettings(mounted)
+  const first = byClass(view.render(), 'dsh-cockpit-grouprow')[0]
+  setInput(byClass(first, 'dsh-cockpit-grow')[0], '改坏的名字')
+  findButton(view.render(), '保存').props.onClick({})
+  assert.equal(mounted.configStore().groups[0].name, '改坏的名字')
+
+  findButton(view.render(), '恢复默认').props.onClick({})
+  findButton(view.render(), '保存').props.onClick({})
+
+  assert.equal(mounted.configStore().groups[0].name, '⚡ gstack 工作流')
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('a pasted config is imported, and a broken one explains itself', async () => {
+  const mounted = mount()
+  const view = await openSettings(mounted)
+  const io = byClass(view.render(), 'dsh-cockpit-io')[0]
+  assert.ok(io, 'the import/export box is there')
+
+  setInput(io, '{ not json')
+  findButton(view.render(), '从框里导入').props.onClick({})
+  assert.match(textOf(view.render()), /解析不了/)
+
+  setInput(io, JSON.stringify({
+    groups: [{ id: 'mine', name: '📚 我的', priority: 90, patterns: ['*'] }],
+    overrides: { browse: 'mine' }
+  }))
+  findButton(view.render(), '从框里导入').props.onClick({})
+  const tree = view.render()
+  assert.match(textOf(tree), /已读进草稿/)
+  const rows = byClass(tree, 'dsh-cockpit-grouprow')
+  assert.equal(rows.length, 1)
+  assert.equal(byClass(rows[0], 'dsh-cockpit-grow')[0].props.value, '📚 我的')
+
+  findButton(tree, '保存').props.onClick({})
+  assert.equal(mounted.configStore().overrides.browse, 'mine')
+  view.cleanups.forEach(cleanup => cleanup())
+})
+
+test('a catalog failure does not take the group editor down', async () => {
+  const mounted = mount({ listFails: true })
+  const view = await openSettings(mounted)
+  const tree = view.render()
+
+  assert.match(textOf(byClass(tree, 'dsh-cockpit-error')[0]), /读不到技能目录/)
+  assert.equal(byClass(tree, 'dsh-cockpit-grouprow').length, 8, 'groups stay editable')
+  view.cleanups.forEach(cleanup => cleanup())
 })

@@ -13,7 +13,7 @@
 |---|---|
 | 宿主 | DeepSeek Harness (DSH)，web / Electron 客户端 |
 | 包名 | `dsh-skills-cockpit`（未发布到 npm，用 `npx github:` 装） |
-| 测试 | `npm test`，30 条（菜单/面板 24 + 安装器 6） |
+| 测试 | `npm test`，37 条（菜单/面板/设置 31 + 安装器 6） |
 | 许可 | MIT |
 
 ---
@@ -63,6 +63,7 @@
 - 每行「中文名 + 英文标识符 + 状态 + 次数」，状态可能是「运行中」「上次失败」或「3 分钟前」
 - 点任意一行复制 `/技能名 `，剪贴板不可用时回退到 `textarea` 方案，底部弹「已复制」
 - 正在跑的技能自己冒出来，不用关掉面板再开
+- 右上角 `设置` 进分组编辑器：改名、排序、改归属、导入导出（见 [四、自定义分组](#四自定义分组)）
 
 ### 什么算「用过」
 
@@ -122,7 +123,17 @@ node scripts/collect-skills.mjs "D:/my/skills" "D:/other/skills"
 
 ## 四、自定义分组
 
-配置存在浏览器的 `localStorage['dsh.cockpit.config']`：
+**推荐在面板里改，不用碰开发者工具。** 右侧栏驾驶舱 → 右上角 `设置`，三块：
+
+| 块 | 能做什么 |
+|---|---|
+| 分组 · 越靠上越先匹配 | 改名、`↑` `↓` 调顺序、`规则` 展开这个组的通配符、`×` 删组 |
+| 技能归属 · 写死的优先于规则 | 搜技能名，用下拉框把它钉到某个组；选「按规则」就交还给通配符 |
+| 导入 / 导出 | 把整份配置导出成 JSON 存文件，或把 JSON 粘回来导入；`恢复默认` 一键回到内置八组 |
+
+点 `保存` 后**下一次敲 `/` 就是新分组**，不用刷新也不用重启 —— 斜杠菜单每次展开都读当前配置，而不是启动时的快照。
+
+配置存在浏览器的 `localStorage['dsh.cockpit.config']`，也可以手写：
 
 ```json
 {
@@ -144,7 +155,10 @@ node scripts/collect-skills.mjs "D:/my/skills" "D:/other/skills"
       "description": "影视全流程、漫剧工坊、分镜预演、图像与音视频生成",
       "patterns": ["film-*", "manju-*", "storyboard-*", "shot-*", "scene-*"]
     }
-  ]
+  ],
+  "overrides": {
+    "browse": "tools"
+  }
 }
 ```
 
@@ -156,11 +170,12 @@ node scripts/collect-skills.mjs "D:/my/skills" "D:/other/skills"
 | `priority` | 排序权重，**越大越靠前**；匹配也是按这个顺序先到先得 |
 | `description` | 面板/文件夹行的补充说明 |
 | `patterns` | 通配符数组：`前缀*`、`*后缀`、`*包含*`、完整名字（不带 `*` 即精确匹配）；`*` 匹配全部 |
+| `overrides` | `{技能名: 分组 id}` 的显式指派，**压过所有通配规则**；指向不存在的组时自动忽略 |
 
-- **先匹配到的组胜出**：同一个技能同时命中两个组时，`priority` 高的组拿走它。所以通用规则要放低优先级。
+- **写死的归属最先算**：`overrides` 命中就用它，其次才按 `priority` 先到先得。所以通用规则要放低优先级。
 - **未命中落到「📦 其他实用技能」**，不会丢技能。
 - **`replaceNative: false`** 保留 DSH 原生那条平铺列表（默认 `true`，即接管它，只留分组列表）。
-- 改完**刷新页面**即可（配置在插件 `apply` 时读取）。
+- 手改 JSON 后刷新页面生效；在面板里改则保存即生效。
 
 ---
 
@@ -278,7 +293,7 @@ dsh-cockpit/
 命令：
 
 ```bash
-npm test                             # 30 条：菜单/面板 24 条 + 安装器 6 条
+npm test                             # 37 条：菜单/面板/设置 31 条 + 安装器 6 条
 node --check client.js               # 语法检查（bundle 不走构建，直接是产物）
 node scripts/embed-i18n.mjs --check  # 中文层是否过期
 ```
@@ -297,6 +312,8 @@ node scripts/embed-i18n.mjs --check  # 中文层是否过期
 - 会话数据要用 `ctx.get('sessions')` / `ctx.get('uiConversation')` 取，再 `sessions.binding(id)` → `uiConversation.binding(binding).target('trajectory')`；`binding()` 对未打开的会话返回 `undefined`，必须当正常分支处理。
 - 面板注册走 `ctx.inject(['sidebarRightTabs','slots'], …)` 而不是模块级 `inject` 列表：没有侧边栏的构建里，斜杠菜单照样能用。
 - `tests/panel.helper.mjs` 的假 React 必须在 effect 里 setState 之后**自动重渲染**。否则「首屏由 effect 填充」的面板永远测出一棵空树，看起来像组件有问题。
+- 设置视图是面板的**子组件**，假 React 还要真的调用子函数组件（`expand()`），否则断言只能看到一层 descriptor。写完记得给行加可区分的 class（`dsh-cockpit-grouprow` / `dsh-cockpit-assignrow`），并注意 **`input` 的值是 `props.value`，不在 `textOf()` 里**。
+- 假 `localStorage` 要带 `removeItem`。漏了它，`clearCockpitConfig()` 会掉进自己的 `try/catch`，「恢复默认」静默变成空操作 —— 测试会指着组件喊错。
 
 ---
 
