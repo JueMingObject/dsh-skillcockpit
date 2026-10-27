@@ -2,8 +2,8 @@
 //
 // Two faces, both registered from this one file:
 //   1. the `/` slash menu, rewritten in place into grouped, drillable folders;
-//   2. a cockpit tab in the right sidebar that lists every skill by group and
-//      copies the command on click.
+//   2. a cockpit tab in the right sidebar that lists the skills running now, the
+//      ones this session used, and the ones this machine has used at all.
 //
 // Contract notes (verified against the harness sources, do not guess):
 //   * `InputTriggerCandidate.drill` is a BOOLEAN flag, not a callback.
@@ -16,7 +16,7 @@
 //   * Skill catalog RPC: `ctx.remote.skills.list({ sessionId }, signal)` returns
 //     `{ ok, value: { skills } }`.
 window.__ModuleLoader__.load({
-  id: '@local/dsh-cockpit',
+  id: 'dsh-skills-cockpit',
   factory: function (require) {
     // The host's module factory resolves package specifiers; the sidebar body is
     // React, so this is the one import the bundle needs. Resolved defensively:
@@ -514,7 +514,7 @@ window.__ModuleLoader__.load({
     // session id through its `inject` props factory — the same shape
     // `ui-sidebar-browser/src/client/index.ts:39-42` uses.
 
-    var COCKPIT_TAB_ID = '@local/dsh-cockpit:panel'
+    var COCKPIT_TAB_ID = 'dsh-skills-cockpit:panel'
     var COCKPIT_TAB_KIND = 'skill-cockpit'
     var SKILL_TOOL = 'skill'
     var USAGE_KEY = 'dsh.cockpit.usage'

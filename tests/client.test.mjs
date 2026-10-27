@@ -74,7 +74,7 @@ function mount(options = {}) {
   }
   vm.runInNewContext(bundle, context, { filename: 'client.js' })
   assert.ok(plugin, 'bundle must call __ModuleLoader__.load')
-  assert.equal(plugin.id, '@local/dsh-cockpit')
+  assert.equal(plugin.id, 'dsh-skills-cockpit')
 
   const registered = []
   const nativeSource = { trigger: '/', name: 'skill', order: 2, candidates: async () => [] }

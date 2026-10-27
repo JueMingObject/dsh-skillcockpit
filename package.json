@@ -1,19 +1,46 @@
 {
-  "name": "@local/dsh-cockpit",
+  "name": "dsh-skills-cockpit",
   "version": "1.3.0",
-  "description": "Custom skill categorization, drillable slash menu enhancer, and workspace cockpit panel for DeepSeek Harness",
-  "private": true,
+  "description": "Grouped, drillable skill menu and a skill-usage cockpit panel for DeepSeek Harness",
+  "license": "MIT",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
     "./client": "./client.js"
   },
+  "bin": {
+    "dsh-skills-cockpit": "bin/install.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "client.js",
+    "zh-skills.json",
+    "zh-i18n.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "skills",
+    "slash-menu"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JueMingObject/dsh-skillcockpit.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "zh:collect": "node scripts/collect-skills.mjs",
     "zh:embed": "node scripts/embed-i18n.mjs",
     "zh:check": "node scripts/embed-i18n.mjs --check",
-    "test": "node --test tests/client.test.mjs"
+    "test": "node --test tests/client.test.mjs tests/install.test.mjs",
+    "install:here": "node bin/install.mjs --dev ."
   },
   "dsh": {
     "client": {
@@ -29,8 +56,5 @@
         "@deepseek-ai/dsh-client-ui-sidebar"
       ]
     }
-  },
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
   }
 }
